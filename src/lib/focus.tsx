@@ -26,11 +26,18 @@ import {
  * needing every component to expose a DOM rect.
  */
 
+type InputMode = "keyboard" | "mouse";
+
 type FocusState = {
   activeSectionId: string | null;
   sectionIndex: Record<string, number>; // sectionId -> active item index
   sectionItemCounts: Record<string, number>; // sectionId -> count
   sectionOrder: string[]; // top-to-bottom ordering
+  /**
+   * Tracks the last input modality. Drives whether to render a focus ring —
+   * keyboard users get the ring; mouse users get hover affordances instead.
+   */
+  inputMode: InputMode;
 };
 
 type Direction = "up" | "down" | "left" | "right";
@@ -41,10 +48,12 @@ type FocusContextValue = {
   setSectionItemCount: (id: string, count: number) => void;
   focusSection: (id: string, itemIndex?: number) => void;
   focusItem: (sectionId: string, index: number) => void;
+  clearFocus: () => void;
   move: (direction: Direction) => void;
   isItemFocused: (sectionId: string, index: number) => boolean;
   onSelect: (sectionId: string, index: number, handler: () => void) => () => void;
   invokeSelect: () => void;
+  setInputMode: (mode: InputMode) => void;
 };
 
 const FocusContext = createContext<FocusContextValue | null>(null);
@@ -55,6 +64,7 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     sectionIndex: {},
     sectionItemCounts: {},
     sectionOrder: [],
+    inputMode: "mouse",
   });
 
   /**
@@ -139,6 +149,14 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const clearFocus = useCallback(() => {
+    setState((s) => ({ ...s, activeSectionId: null }));
+  }, []);
+
+  const setInputMode = useCallback((mode: InputMode) => {
+    setState((s) => (s.inputMode === mode ? s : { ...s, inputMode: mode }));
+  }, []);
+
   const move = useCallback((direction: Direction) => {
     setState((s) => {
       const { activeSectionId, sectionOrder, sectionIndex, sectionItemCounts } = s;
@@ -212,10 +230,10 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
-   * Global key handler. Arrow keys move; Enter/Space selects.
-   * Ignores key events that originate inside a real input/textarea so the
-   * user can type into the prompt panel without the focus engine stealing
-   * the keystrokes.
+   * Global key handler. Arrow keys move; Enter/Space selects; Escape clears.
+   * Any keystroke flips us into "keyboard" input mode so the focus ring shows.
+   * Ignores key events that originate inside a real input/textarea so the user
+   * can type into the prompt panel without the focus engine stealing keys.
    */
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -226,30 +244,60 @@ export function FocusProvider({ children }: { children: ReactNode }) {
       switch (e.key) {
         case "ArrowUp":
           e.preventDefault();
+          setInputMode("keyboard");
           move("up");
           break;
         case "ArrowDown":
           e.preventDefault();
+          setInputMode("keyboard");
           move("down");
           break;
         case "ArrowLeft":
           e.preventDefault();
+          setInputMode("keyboard");
           move("left");
           break;
         case "ArrowRight":
           e.preventDefault();
+          setInputMode("keyboard");
           move("right");
           break;
         case "Enter":
         case " ":
           e.preventDefault();
+          setInputMode("keyboard");
           invokeSelect();
+          break;
+        case "Escape":
+          e.preventDefault();
+          clearFocus();
           break;
       }
     }
+    function onMouseMove() {
+      setInputMode("mouse");
+    }
+    /**
+     * Click anywhere that isn't a tile clears the active focus. This is the
+     * only way a user can return to a "nothing selected" state with the mouse.
+     */
+    function onDocClick(e: MouseEvent) {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest("[data-focusable-tile]")) return;
+      // Clicks on row chevrons should NOT clear — they're navigation.
+      if (target.closest("[data-row-nav]")) return;
+      clearFocus();
+    }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [move, invokeSelect]);
+    window.addEventListener("mousemove", onMouseMove, { passive: true });
+    window.addEventListener("mousedown", onDocClick);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mousedown", onDocClick);
+    };
+  }, [move, invokeSelect, clearFocus, setInputMode]);
 
   const value = useMemo<FocusContextValue>(
     () => ({
@@ -258,12 +306,14 @@ export function FocusProvider({ children }: { children: ReactNode }) {
       setSectionItemCount,
       focusSection,
       focusItem,
+      clearFocus,
       move,
       isItemFocused,
       onSelect,
       invokeSelect,
+      setInputMode,
     }),
-    [state, registerSection, setSectionItemCount, focusSection, focusItem, move, isItemFocused, onSelect, invokeSelect],
+    [state, registerSection, setSectionItemCount, focusSection, focusItem, clearFocus, move, isItemFocused, onSelect, invokeSelect, setInputMode],
   );
 
   return <FocusContext.Provider value={value}>{children}</FocusContext.Provider>;

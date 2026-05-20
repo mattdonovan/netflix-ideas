@@ -146,6 +146,10 @@ const baseTheme: ThemeOptions = {
             transform: "scale(0.97)",
           },
         },
+        // `contained` = the off-white "Open / More info"-style primary action.
+        // For the Netflix-red brand button (Sign In on the Figma auth screen
+        // and the Home hero's "Open Channels"), use the `brand` color prop —
+        // see the variants block below.
         contained: {
           backgroundColor: t.color.textPrimary,
           color: t.color.textInverse,
@@ -169,6 +173,24 @@ const baseTheme: ThemeOptions = {
           },
         },
       },
+      variants: [
+        {
+          props: { color: "brand" as never },
+          style: {
+            backgroundColor: t.color.brand,
+            color: t.color.textPrimary,
+            "&:hover": { backgroundColor: "#F40612" },
+          },
+        },
+        {
+          props: { size: "small" as never },
+          style: {
+            minHeight: 40,
+            paddingInline: t.space.md,
+            fontSize: t.type.scale.bodySmall.size,
+          },
+        },
+      ],
     },
     MuiPaper: {
       defaultProps: { elevation: 0 },
@@ -185,30 +207,59 @@ const baseTheme: ThemeOptions = {
       },
       styleOverrides: {
         root: {
+          // Figma input fields: dark fill, no underline, focus = inner white
+          // stroke (not a glow). Error = brand red stroke + helper text below.
           "& .MuiFilledInput-root": {
             backgroundColor: t.color.surfaceMid,
             borderRadius: t.radius.sm,
             fontSize: t.type.scale.body.size,
+            border: `2px solid transparent`,
+            transition: `border-color ${t.motion.duration.focus}ms ${t.motion.easing.focus}, background-color ${t.motion.duration.focus}ms ${t.motion.easing.focus}`,
             "&:before, &:after": { display: "none" },
-            "&:hover, &.Mui-focused": {
+            "&:hover": {
               backgroundColor: t.color.surfaceHigh,
+            },
+            "&.Mui-focused": {
+              backgroundColor: t.color.surfaceMid,
+              borderColor: t.color.textPrimary,
+            },
+            "&.Mui-error": {
+              borderColor: t.color.errorStroke,
             },
           },
           "& .MuiInputLabel-root": {
             color: t.color.textSecondary,
             fontSize: t.type.scale.bodySmall.size,
           },
+          "& .MuiFormHelperText-root": {
+            fontSize: t.type.scale.micro.size,
+            letterSpacing: t.type.scale.micro.letterSpacing,
+            marginTop: t.space.xs,
+            "&.Mui-error": { color: t.color.errorStroke },
+          },
         },
       },
     },
     MuiChip: {
+      // Figma's "Icons and Labels" frame uses small-radius pills for tags,
+      // not fully-rounded MUI pill chips. Match that visual.
       styleOverrides: {
         root: {
-          borderRadius: t.radius.pill,
-          height: 40,
+          borderRadius: t.radius.sm,
+          height: 32,
           fontSize: t.type.scale.label.size,
-          paddingInline: t.space.sm,
+          fontWeight: t.type.weight.semibold,
+          paddingInline: t.space.xs,
           backgroundColor: t.color.surfaceMid,
+          color: t.color.textPrimary,
+          letterSpacing: "0.02em",
+        },
+        label: {
+          paddingInline: t.space.xs,
+        },
+        outlined: {
+          borderColor: t.color.borderStrong,
+          backgroundColor: "transparent",
         },
       },
     },

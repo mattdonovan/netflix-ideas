@@ -5,53 +5,42 @@ import { tokens } from "@/theme/tokens";
 /**
  * The TV frame.
  *
- * Sets the canonical viewport (1920×1080), enforces the 5% safe zone on every
- * edge, and provides the base surface. All TV screens render inside a TvFrame.
+ * Provides the base dark surface plus the canonical 5% safe-zone padding. Acts
+ * as a normally-flowing page rather than a fixed 1920×1080 letterbox — the
+ * page scrolls vertically when content overflows, and the canvas is centered
+ * at a 1920px max-width so the layout doesn't anchor to the right on
+ * non-TV-aspect viewports.
  *
- * On non-TV viewports (laptop, dev), we still render the same 1920×1080 box
- * scaled down to fit the available window — this preserves design proportions
- * during development. The scale uses CSS transform so layout math inside is
- * untouched.
+ * Why we dropped the `transform: scale()` lock: it prevented scrolling and
+ * caused the canvas to drift visually right at narrow widths. The trade-off
+ * is that we no longer enforce a hard TV pixel size on the browser — but
+ * design clarity is preserved by the 1920px max-width plus the safe-zone
+ * padding, which together keep the TV-grade proportions wherever the
+ * viewport allows it.
  */
 export function TvFrame({ children }: { children: ReactNode }) {
-  const { width, height } = tokens.tv.viewport;
   return (
     <Box
       sx={{
-        width: "100vw",
-        height: "100vh",
-        display: "grid",
-        placeItems: "center",
-        overflow: "hidden",
+        minHeight: "100vh",
+        width: "100%",
         backgroundColor: tokens.color.base,
-        // Hide cursor on the TV frame — focus is the interaction model.
-        cursor: "none",
+        color: tokens.color.textPrimary,
+        fontFamily: tokens.type.family.sans,
+        display: "flex",
+        flexDirection: "column",
+        paddingInline: {
+          xs: `${tokens.space.md}px`,
+          md: `${tokens.space.lg}px`,
+          lg: `${tokens.space.xl}px`,
+        },
+        paddingBlock: {
+          xs: `${tokens.space.md}px`,
+          md: `${tokens.space.lg}px`,
+        },
       }}
     >
-      <Box
-        sx={{
-          width,
-          height,
-          position: "relative",
-          backgroundColor: tokens.color.base,
-          // Fit-to-window scaling without changing inner coordinates.
-          transform: `scale(min(calc(100vw / ${width}), calc(100vh / ${height})))`,
-          transformOrigin: "center",
-          overflow: "hidden",
-        }}
-      >
-        {/* Safe-zone-respecting content area */}
-        <Box
-          sx={{
-            position: "absolute",
-            inset: `${tokens.tv.safeBox.marginY}px ${tokens.tv.safeBox.marginX}px`,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {children}
-        </Box>
-      </Box>
+      {children}
     </Box>
   );
 }

@@ -1,62 +1,93 @@
 import { Box, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
 import { tokens } from "@/theme/tokens";
 
 /**
- * D-pad cue strip.
+ * Remote cue.
  *
- * Persistent footer that tells the viewer which remote controls are wired
- * to which actions in the current context. On a real TV this would be the
- * thing the user glances at once before forgetting it exists. In the
- * prototype, it doubles as documentation for the demo viewer.
+ * Netflix-on-TV does not surface key-cap glyphs in boxes. The interaction is
+ * meant to be discovered through focus state — the cue should be a soft
+ * whisper at the bottom of the screen, not a keyboard tester.
+ *
+ * Idle-fade behavior: after `tokens.tv.idleDelayMs` of no keyboard input the
+ * cue drops to a lower opacity, signalling "you've got this" — and reappears
+ * at the next keypress. The MDS pass-1 finding: a persistently-visible cue
+ * is training wheels; the right move is to teach once and then get out of
+ * the way.
  */
 
 export type CueKey = "↑" | "↓" | "←" | "→" | "OK" | "T" | "BACK";
 
 export function RemoteCue({ cues }: { cues: Array<{ key: CueKey | string; label: string }> }) {
+  const [idle, setIdle] = useState(false);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    function schedule() {
+      if (timer) clearTimeout(timer);
+      setIdle(false);
+      timer = setTimeout(() => setIdle(true), tokens.tv.idleDelayMs);
+    }
+    schedule();
+    window.addEventListener("keydown", schedule);
+    window.addEventListener("pointermove", schedule);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("keydown", schedule);
+      window.removeEventListener("pointermove", schedule);
+    };
+  }, []);
+
   return (
     <Box
       sx={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
         display: "flex",
-        justifyContent: "center",
+        justifyContent: "flex-end",
+        alignItems: "center",
         gap: `${tokens.space.lg}px`,
-        padding: `${tokens.space.md}px ${tokens.space.lg}px`,
+        opacity: idle ? 0.25 : 0.7,
+        transition: `opacity ${tokens.motion.duration.page}ms ${tokens.motion.easing.focus}`,
       }}
     >
-      {cues.map((cue) => (
+      {cues.map((cue, i) => (
         <Box
           key={cue.key + cue.label}
           sx={{
             display: "flex",
             alignItems: "center",
-            gap: `${tokens.space.xs}px`,
+            gap: `${tokens.space.sm}px`,
           }}
         >
-          <Box
-            sx={{
-              minWidth: 48,
-              height: 48,
-              paddingInline: `${tokens.space.sm}px`,
-              borderRadius: `${tokens.radius.sm}px`,
-              border: `2px solid ${tokens.color.borderStrong}`,
-              backgroundColor: tokens.color.surfaceLow,
-              color: tokens.color.textPrimary,
-              display: "grid",
-              placeItems: "center",
-              fontSize: tokens.type.scale.label.size,
-              fontWeight: tokens.type.weight.semibold,
-            }}
-          >
-            {cue.key}
-          </Box>
+          {i > 0 && (
+            <Box
+              sx={{
+                width: 1,
+                height: 16,
+                backgroundColor: tokens.color.textTertiary,
+                opacity: 0.4,
+                mr: `${tokens.space.lg - tokens.space.sm}px`,
+              }}
+            />
+          )}
           <Typography
             sx={{
               color: tokens.color.textSecondary,
-              fontSize: tokens.type.scale.bodySmall.size,
-              fontWeight: tokens.type.weight.medium,
+              fontSize: tokens.type.scale.label.size,
+              fontWeight: tokens.type.weight.semibold,
+              fontFeatureSettings: `'ss01'`,
+              letterSpacing: "0.02em",
+              lineHeight: 1,
+            }}
+          >
+            {cue.key}
+          </Typography>
+          <Typography
+            sx={{
+              color: tokens.color.textTertiary,
+              fontSize: tokens.type.scale.micro.size,
+              fontWeight: tokens.type.weight.semibold,
+              letterSpacing: tokens.type.scale.micro.letterSpacing,
+              textTransform: "uppercase",
             }}
           >
             {cue.label}
