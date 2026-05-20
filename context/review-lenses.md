@@ -184,7 +184,9 @@ When Matt says "review the Channels prototype" or "review pass on what I just pu
 
 ## How to publish a review pass
 
-Each review pass produces a markdown file at `reviews/YYYY-MM-DD-<prototype>-<pass>.md`. Required structure:
+Each review pass produces a markdown file at `reviews/YYYY-MM-DD-<prototype>-<pass>.md` on `main`. After writing the file, commit and push, then open a GitHub issue titled `Review pass: <prototype> <pass> (YYYY-MM-DD)`. The issue body links to the review file and pulls out the "single biggest opportunity" line as the headline. The issue is the discussion surface; the file is the artifact.
+
+Required file structure:
 
 ```markdown
 # Review pass — <prototype> — <pass label>
@@ -238,6 +240,4 @@ Pass: first | iteration | final
 - **Stretch:** <ambitious, conditional>
 ```
 
-After writing the file, the review is committed and pushed to the repo on a branch named `review/<date>-<prototype>-<pass>`. Open a GitHub issue tagging the prototype: title `Review pass: <prototype> <pass> (YYYY-MM-DD)`, body = a link to the review file plus the "single biggest opportunity" line pulled out as the issue's headline.
-
-This keeps reviews discoverable from the GitHub repo for the writeup, and it forces the review to compose with the codebase rather than living as an external doc.
+This keeps reviews discoverable from the GitHub repo for the writeup, and it forces the review to compose with the codebase rather than living as an external doc. The companion GitHub issue makes the headline scannable and provides a comment thread for follow-up critique.
