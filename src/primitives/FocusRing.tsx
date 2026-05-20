@@ -25,6 +25,14 @@ export function FocusRing({
   children: ReactNode;
 }) {
   const scale = focused ? (pressed ? tokens.tv.focusScale * 0.97 : tokens.tv.focusScale) : 1;
+  // Composite ring tuned to Figma 109-9726: a 2px translucent off-white
+  // outer stroke + a soft inner halo + a moderate deep shadow for lift.
+  // The pass-1 finding (no hard browser outline) still holds — the stroke
+  // is intentionally short of solid so it reads as a Netflix bloom rather
+  // than a focus rect.
+  const ringShadow = focused
+    ? `0 0 0 2px rgba(245,245,245,0.92), 0 0 0 8px rgba(245,245,245,0.10), 0 18px 40px rgba(0,0,0,0.55)`
+    : "none";
   return (
     <Box
       sx={{
@@ -32,9 +40,7 @@ export function FocusRing({
         borderRadius: `${radius}px`,
         transition: `transform ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}, box-shadow ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
         transform: `scale(${scale})`,
-        boxShadow: focused ? tokens.color.focusShadow : "none",
-        outline: focused ? `4px solid ${tokens.color.focusRing}` : "4px solid transparent",
-        outlineOffset: "0px",
+        boxShadow: ringShadow,
         willChange: "transform",
       }}
     >

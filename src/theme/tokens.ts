@@ -36,10 +36,15 @@ export const tokens = {
     accentHover: "#F25862",
     accentMuted: "rgba(228, 64, 76, 0.16)",
 
+    // Brand quotation — real Netflix red. Held in reserve for moments where
+    // the reference is intentional (Invite share CTA, acceptance flash).
+    brand: "#E50914",
+
     // Semantic
     success: "#2BB673",
     warning: "#E5A23A",
     danger: "#E4404C",
+    errorStroke: "#E50914",
 
     // Borders / dividers — minimum 2px on TV
     border: "rgba(245, 245, 245, 0.08)",
@@ -68,6 +73,23 @@ export const tokens = {
   },
 
   /**
+   * Grouping spacing — semantic tokens that encode "how much air should sit
+   * between things that belong together vs. things that are separate."
+   *
+   * cardGap: cards within a row are tightly grouped (they form one logical
+   *   reel). Tight gaps signal "these scroll together."
+   * rowGap: rows are independent sections — they need breathing room.
+   * rowReelPadding: vertical breathing room *inside* the reel, so that the
+   *   card-pop scale animation has room to extend above/below the resting
+   *   tile footprint without being clipped by the row title or the next row.
+   */
+  grouping: {
+    cardGap: 8,
+    rowGap: 32,
+    rowReelPadding: 56,
+  },
+
+  /**
    * Typography. Inter as the open-source stand-in for Netflix Sans.
    * Sizes are tuned for 10ft viewing — body floors at 24px.
    */
@@ -77,6 +99,7 @@ export const tokens = {
       mono: `'JetBrains Mono', 'SF Mono', Menlo, monospace`,
     },
     weight: {
+      light: 300,
       regular: 400,
       medium: 500,
       semibold: 600,
