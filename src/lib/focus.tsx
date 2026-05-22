@@ -85,10 +85,10 @@ export function FocusProvider({ children }: { children: ReactNode }) {
           };
         }
         const order = [...s.sectionOrder, id];
-        const active = s.activeSectionId ?? id;
+        // Registration does NOT auto-activate. The page opens with no active
+        // section; hover lights up rows (CSS), click opens the detail modal.
         return {
           ...s,
-          activeSectionId: active,
           sectionOrder: order,
           sectionIndex: { ...s.sectionIndex, [id]: s.sectionIndex[id] ?? 0 },
           sectionItemCounts: { ...s.sectionItemCounts, [id]: itemCount },
@@ -230,74 +230,21 @@ export function FocusProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
-   * Global key handler. Arrow keys move; Enter/Space selects; Escape clears.
-   * Any keystroke flips us into "keyboard" input mode so the focus ring shows.
-   * Ignores key events that originate inside a real input/textarea so the user
-   * can type into the prompt panel without the focus engine stealing keys.
+   * Mouse modality tracker. We no longer ship TV-remote keyboard navigation
+   * in the Channels prototype — interactions are mouse-first — so the global
+   * key listener is gone. Mouse mode is the only mode the UI now respects;
+   * we keep `inputMode` in state for future re-introduction of accessibility
+   * focus rings if needed.
    */
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
-        return;
-      }
-      switch (e.key) {
-        case "ArrowUp":
-          e.preventDefault();
-          setInputMode("keyboard");
-          move("up");
-          break;
-        case "ArrowDown":
-          e.preventDefault();
-          setInputMode("keyboard");
-          move("down");
-          break;
-        case "ArrowLeft":
-          e.preventDefault();
-          setInputMode("keyboard");
-          move("left");
-          break;
-        case "ArrowRight":
-          e.preventDefault();
-          setInputMode("keyboard");
-          move("right");
-          break;
-        case "Enter":
-        case " ":
-          e.preventDefault();
-          setInputMode("keyboard");
-          invokeSelect();
-          break;
-        case "Escape":
-          e.preventDefault();
-          clearFocus();
-          break;
-      }
-    }
     function onMouseMove() {
       setInputMode("mouse");
     }
-    /**
-     * Click anywhere that isn't a tile clears the active focus. This is the
-     * only way a user can return to a "nothing selected" state with the mouse.
-     */
-    function onDocClick(e: MouseEvent) {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      if (target.closest("[data-focusable-tile]")) return;
-      // Clicks on row chevrons should NOT clear — they're navigation.
-      if (target.closest("[data-row-nav]")) return;
-      clearFocus();
-    }
-    window.addEventListener("keydown", onKey);
     window.addEventListener("mousemove", onMouseMove, { passive: true });
-    window.addEventListener("mousedown", onDocClick);
     return () => {
-      window.removeEventListener("keydown", onKey);
       window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mousedown", onDocClick);
     };
-  }, [move, invokeSelect, clearFocus, setInputMode]);
+  }, [setInputMode]);
 
   const value = useMemo<FocusContextValue>(
     () => ({

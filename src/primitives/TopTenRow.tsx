@@ -1,10 +1,10 @@
-import { Box, Typography } from "@mui/material";
-import { type ReactNode, useEffect, useRef, useState } from "react";
-import { IconButton } from "@mui/material";
+import { Box, Typography, IconButton } from "@mui/material";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { tokens } from "@/theme/tokens";
-import { useFocusContext, useSection } from "@/lib/focus";
+import { useSection } from "@/lib/focus";
+import { RowSizingContext } from "./Row";
 
 /**
  * Top 10 row — Figma 106-9360.
@@ -13,13 +13,35 @@ import { useFocusContext, useSection } from "@/lib/focus";
  * portrait card. The card is offset to the right of its number so the digit
  * is fully visible on the left side of each "slot."
  *
- * Children should be portrait-aspect tiles (Tile aspect="poster"). The
- * numeral is rendered by this component, not by the tile — so the tile stays
- * generic and reusable.
+ * Layout + paging logic matches the standard Row: transform-based, edge-to-edge,
+ * page advances by `perView` slots, chevrons sit on top of the partial slot
+ * peeking past the viewport edges. See Row.tsx for the full rationale.
  */
+
+const CHEVRON_WIDTH = 56;
+
+type PerView = { xs?: number; sm?: number; md?: number; lg?: number; xl?: number };
+
+function pickPerView(width: number, pv: PerView = {}): number {
+  if (width >= 1536) return pv.xl ?? 5;
+  if (width >= 1200) return pv.lg ?? 4;
+  if (width >= 900) return pv.md ?? 3;
+  if (width >= 600) return pv.sm ?? 2;
+  return pv.xs ?? 2;
+}
+
+function pickInset(width: number): number {
+  if (width >= 1200) return tokens.space.xl;
+  if (width >= 900) return tokens.space.lg;
+  return tokens.space.md;
+}
+
 export function TopTenRow({
   sectionId,
   title,
+  leadingIcon,
+  hoverHint,
+  onTitleClick,
   titleSlot,
   itemCount,
   itemsPerView,
@@ -28,202 +50,244 @@ export function TopTenRow({
 }: {
   sectionId: string;
   title?: string;
+  leadingIcon?: ReactNode;
+  hoverHint?: ReactNode;
+  onTitleClick?: () => void;
   titleSlot?: ReactNode;
   itemCount: number;
-  itemsPerView?: { xs?: number; sm?: number; md?: number; lg?: number; xl?: number };
+  itemsPerView?: PerView;
   gap?: number;
   children: ReactNode;
 }) {
   const cappedCount = Math.min(itemCount, 10);
-  const { activeIndex, isActive, focusItem } = useSection(sectionId, cappedCount);
-  const ctx = useFocusContext();
-  const reelRef = useRef<HTMLDivElement | null>(null);
-  const [chevrons, setChevrons] = useState({ left: false, right: false });
+  const { activeIndex, isActive } = useSection(sectionId, cappedCount);
 
-  const perView = {
-    xs: itemsPerView?.xs ?? 1.4,
-    sm: itemsPerView?.sm ?? 2.2,
-    md: itemsPerView?.md ?? 3.2,
-    lg: itemsPerView?.lg ?? 4.2,
-    xl: itemsPerView?.xl ?? 5.2,
-  };
+  // Measure the reel (full-bleed) rather than the padded outer container so
+  // card sizing accounts for the actual horizontal paint area. See Row.tsx.
+  const reelRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  const [page, setPage] = useState(0);
 
-  // The slot's height is locked so the numeral and the poster end up the
-  // exact same height by construction. The poster cell inside the slot is
-  // height: 100% with aspectRatio 2/3 (so its width auto-derives), and the
-  // numeral's fontSize is tied to this height so the digit visually fills it.
-  const slotHeight = { xs: 130, sm: 170, md: 210, lg: 240, xl: 270 };
+  useEffect(() => {
+    const el = reelRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const cr = entries[0]?.contentRect;
+      if (cr) setWidth(cr.width);
+    });
+    ro.observe(el);
+    setWidth(el.clientWidth);
+    return () => ro.disconnect();
+  }, []);
+
+  const perView = Math.max(1, Math.floor(pickPerView(width, itemsPerView)));
+  const leftInset = pickInset(width);
+
+  const slotW =
+    width > 0
+      ? Math.max(120, (width - leftInset - CHEVRON_WIDTH - (perView - 1) * gap) / perView)
+      : 0;
+  const pageDistance = perView * (slotW + gap);
+  const totalPages = Math.max(1, Math.ceil(cappedCount / perView));
+  const maxTranslate = Math.max(
+    0,
+    leftInset + cappedCount * (slotW + gap) - gap - width + CHEVRON_WIDTH,
+  );
+
+  useEffect(() => {
+    if (page > totalPages - 1) setPage(Math.max(0, totalPages - 1));
+  }, [page, totalPages]);
 
   useEffect(() => {
     if (!isActive) return;
-    const reel = reelRef.current;
-    if (!reel) return;
-    const child = reel.children[activeIndex] as HTMLElement | undefined;
-    if (!child) return;
-    // Scroll only the reel horizontally — don't let scrollIntoView bubble
-    // to the page and yank the hero off-screen on mount.
-    const target = child.offsetLeft + child.offsetWidth / 2 - reel.clientWidth / 2;
-    reel.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
-  }, [activeIndex, isActive]);
+    const targetPage = Math.floor(activeIndex / perView);
+    if (targetPage !== page) setPage(targetPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex, isActive, perView]);
 
-  useEffect(() => {
-    const reel = reelRef.current;
-    if (!reel) return;
-    function update() {
-      if (!reel) return;
-      const atStart = reel.scrollLeft <= 4;
-      const atEnd = reel.scrollLeft + reel.clientWidth >= reel.scrollWidth - 4;
-      setChevrons({ left: !atStart, right: !atEnd });
-    }
-    update();
-    reel.addEventListener("scroll", update, { passive: true });
-    const ro = new ResizeObserver(update);
-    ro.observe(reel);
-    return () => {
-      reel.removeEventListener("scroll", update);
-      ro.disconnect();
-    };
-  }, []);
+  const desired = page * pageDistance;
+  const translate = Math.min(desired, Math.max(0, maxTranslate));
 
-  function nudge(direction: -1 | 1) {
-    ctx.setInputMode("keyboard");
-    const next = Math.max(0, Math.min(cappedCount - 1, activeIndex + direction));
-    focusItem(next);
+  function nudge(dir: -1 | 1) {
+    setPage((p) => Math.max(0, Math.min(totalPages - 1, p + dir)));
   }
 
-  // We only render the first 10 children — this is a Top 10 row by definition.
-  const items = Array.from({ length: Math.min(itemCount, 10) });
+
+  // Slot dimensions: width is locked by the same perView logic as Row.tsx so
+  // columns align with the boxart rows. Slot height derives from slot width
+  // via aspectRatio (6/5), which yields a portrait poster (height 100% of
+  // slot, aspect 2/3) that occupies ~56% of the slot's width — matching the
+  // Netflix layout where the numeral takes the left half and the poster
+  // takes the right half of each column.
   const childArray: ReactNode[] = Array.isArray(children) ? children : [children];
+  const items = Array.from({ length: cappedCount });
+
+  const sizingValue = useMemo(
+    () => ({ perView, itemCount: cappedCount }),
+    [perView, cappedCount],
+  );
 
   return (
-    <Box>
+    <RowSizingContext.Provider value={sizingValue}>
+    <Box
+      sx={{
+        position: "relative",
+        zIndex: 1,
+        "&:hover, &:has([data-focusable-tile]:hover)": {
+          zIndex: 50,
+          "& .row-title-bar": { opacity: 1 },
+        },
+      }}
+    >
       <Box
+        className="row-title-bar"
         sx={{
-          mb: `${tokens.space.sm}px`,
+          mb: 0,
+          paddingInline: 0,
           display: "flex",
           alignItems: "center",
           gap: `${tokens.space.sm}px`,
-          opacity: isActive ? 1 : 0.85,
+          opacity: 0.85,
           transition: `opacity ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
         }}
       >
-        {title && (
-          <Typography
+        {(leadingIcon || title || hoverHint) && (
+          <Box
+            component={onTitleClick ? "button" : "div"}
+            type={onTitleClick ? "button" : undefined}
+            onClick={onTitleClick}
+            className="row-title-trigger"
             sx={{
-              fontSize: { xs: 18, md: 22, lg: 26 },
-              lineHeight: 1.2,
-              fontWeight: tokens.type.weight.semibold,
-              color: tokens.color.textPrimary,
-              letterSpacing: "-0.005em",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "20px",
+              marginLeft: "-26px",
+              marginRight: "-20px",
+              marginBlock: "-20px",
+              background: "transparent",
+              border: 0,
+              font: "inherit",
+              textAlign: "left",
+              color: "inherit",
+              cursor: onTitleClick ? "pointer" : "default",
+              "&:hover .row-title-icon path": {
+                animationName: "channelBarCycle",
+                animationDuration: "1.4s",
+                animationTimingFunction: "linear",
+                animationIterationCount: "infinite",
+              },
+              "&:hover .row-title-label": { color: "#fff" },
+              "&:hover .row-title-hint": { opacity: 1, transform: "translateX(0)" },
             }}
           >
-            {title}
-          </Typography>
+            {leadingIcon && (
+              <Box
+                className="row-title-icon"
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  color: tokens.color.textSecondary,
+                  transition: `color ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
+                }}
+              >
+                {leadingIcon}
+              </Box>
+            )}
+            {title && (
+              <Typography
+                className="row-title-label"
+                sx={{
+                  fontSize: { xs: 16, md: 18, lg: 20 },
+                  lineHeight: 1.2,
+                  fontWeight: tokens.type.weight.semibold,
+                  color: tokens.color.textPrimary,
+                  letterSpacing: "-0.005em",
+                  transition: `color ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
+                }}
+              >
+                {title}
+              </Typography>
+            )}
+            {hoverHint && (
+              <Box
+                className="row-title-hint"
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  color: tokens.color.textSecondary,
+                  marginLeft: "10px",
+                  opacity: 0,
+                  transform: "translateX(-6px)",
+                  transition: `opacity ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}, transform ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
+                }}
+              >
+                {hoverHint}
+              </Box>
+            )}
+          </Box>
         )}
         {titleSlot}
+        <Box sx={{ flex: 1 }} />
+        {totalPages > 1 && <PageProgress pages={totalPages} current={page} />}
       </Box>
-      <Box sx={{ position: "relative", "&:hover .row-chevron": { opacity: 1 } }}>
-        {chevrons.left && (
-          <IconButton
-            data-row-nav
-            className="row-chevron"
-            aria-label="Scroll left"
-            onClick={() => nudge(-1)}
-            sx={{
-              position: "absolute",
-              left: 0,
-              top: "50%",
-              transform: "translateY(-50%)",
-              zIndex: 3,
-              backgroundColor: "rgba(20,20,20,0.7)",
-              color: tokens.color.textPrimary,
-              width: 40,
-              height: 64,
-              borderRadius: 0,
-              opacity: 0,
-              transition: `opacity ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
-              "&:hover": { backgroundColor: "rgba(20,20,20,0.9)" },
-            }}
-          >
-            <ChevronLeftIcon sx={{ fontSize: 32 }} />
-          </IconButton>
-        )}
-        {chevrons.right && (
-          <IconButton
-            data-row-nav
-            className="row-chevron"
-            aria-label="Scroll right"
-            onClick={() => nudge(1)}
-            sx={{
-              position: "absolute",
-              right: 0,
-              top: "50%",
-              transform: "translateY(-50%)",
-              zIndex: 3,
-              backgroundColor: "rgba(20,20,20,0.7)",
-              color: tokens.color.textPrimary,
-              width: 40,
-              height: 64,
-              borderRadius: 0,
-              opacity: 0,
-              transition: `opacity ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
-              "&:hover": { backgroundColor: "rgba(20,20,20,0.9)" },
-            }}
-          >
-            <ChevronRightIcon sx={{ fontSize: 32 }} />
-          </IconButton>
-        )}
+
+      <Box
+        ref={reelRef}
+        sx={{
+          position: "relative",
+          marginInline: {
+            xs: `-${tokens.space.md}px`,
+            md: `-${tokens.space.lg}px`,
+            lg: `-${tokens.space.xl}px`,
+          },
+          overflowX: "clip",
+          overflowY: "visible",
+          "&:hover .row-chevron": { opacity: 1 },
+        }}
+      >
         <Box
-          ref={reelRef}
           sx={{
             display: "flex",
             gap: `${gap}px`,
-            overflowX: "auto",
-            overflowY: "visible",
-            scrollSnapType: "x mandatory",
-            scrollPaddingInline: `${gap}px`,
-            paddingBlock: `${tokens.grouping.rowReelPadding}px`,
-            scrollbarWidth: "none",
-            "&::-webkit-scrollbar": { display: "none" },
-            "& > .top-ten-slot": {
-              scrollSnapAlign: "start",
-              flexShrink: 0,
-              width: {
-                xs: `calc((100% - ${(perView.xs - 1) * gap}px) / ${perView.xs})`,
-                sm: `calc((100% - ${(perView.sm - 1) * gap}px) / ${perView.sm})`,
-                md: `calc((100% - ${(perView.md - 1) * gap}px) / ${perView.md})`,
-                lg: `calc((100% - ${(perView.lg - 1) * gap}px) / ${perView.lg})`,
-                xl: `calc((100% - ${(perView.xl - 1) * gap}px) / ${perView.xl})`,
-              },
-            },
+            paddingTop: "10px",
+            paddingBottom: `${tokens.grouping.rowReelPadding}px`,
+            paddingLeft: leftInset > 0 ? `${leftInset}px` : undefined,
+            transform: `translate3d(${-translate}px, 0, 0)`,
+            transition: `transform 600ms ${tokens.motion.easing.focus}`,
+            willChange: "transform",
           }}
         >
           {items.map((_, i) => (
             <Box
               key={i}
-              className="top-ten-slot"
               sx={{
                 position: "relative",
                 display: "flex",
-                alignItems: "flex-end",
-                height: slotHeight,
-                // Numeral overflow can spill beyond the slot left edge — keep
-                // it visible so the digit reads as a giant outline behind
-                // the poster.
+                alignItems: "center",
+                aspectRatio: "6 / 5",
+                flexShrink: 0,
+                width: slotW > 0 ? `${slotW}px` : "auto",
+                // Poster cell carries a small negative marginLeft so it
+                // overlaps its own numeral by just a few pixels — keep
+                // overflow visible so the digit isn't clipped.
                 overflow: "visible",
               }}
             >
               <TopTenNumeral rank={i + 1} />
-              {/* Poster wrapper: locks to slot height with 2:3 portrait
-                  aspect, so width auto-derives. Do NOT set z-index here —
-                  it would create a stacking context and trap the tile's
-                  expanded card-pop inside it. */}
               <Box
                 sx={{
                   position: "relative",
                   height: "100%",
                   aspectRatio: "2 / 3",
                   flexShrink: 0,
+                  marginLeft: { xs: "-4px", sm: "-5px", md: "-6px", lg: "-7px", xl: "-8px" },
+                  // Intentionally no zIndex here. The poster already paints
+                  // over the numeral via document order, and a z-index on
+                  // this wrapper would create a stacking context that traps
+                  // the Tile's hover-bloom (zIndex 30) inside this slot —
+                  // letting the next slot paint above the first card's
+                  // expanded partial.
                 }}
               >
                 {childArray[i]}
@@ -231,20 +295,81 @@ export function TopTenRow({
             </Box>
           ))}
         </Box>
+
+        {page > 0 && <ChevronButton side="left" onClick={() => nudge(-1)} />}
+        {page < totalPages - 1 && <ChevronButton side="right" onClick={() => nudge(1)} />}
       </Box>
+    </Box>
+    </RowSizingContext.Provider>
+  );
+}
+
+function ChevronButton({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
+  return (
+    <IconButton
+      data-row-nav
+      className="row-chevron"
+      aria-label={side === "left" ? "Previous page" : "Next page"}
+      onClick={onClick}
+      sx={{
+        position: "absolute",
+        [side]: 0,
+        top: 0,
+        bottom: 0,
+        height: "auto",
+        width: CHEVRON_WIDTH,
+        // Hit-area stays at the full slab; the glyph inside scales on hover so
+        // the affordance feels active without the target growing.
+        "& .MuiSvgIcon-root": {
+          transition: `transform ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
+        },
+        "&:hover .MuiSvgIcon-root": { transform: "scale(1.4)" },
+        borderRadius: 0,
+        zIndex: 40,
+        backgroundColor: "rgba(20,20,20,0.5)",
+        color: tokens.color.textPrimary,
+        opacity: 0,
+        transition: `opacity ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}, background-color 150ms`,
+        "&:hover": { backgroundColor: "rgba(20,20,20,0.8)" },
+      }}
+    >
+      {side === "left" ? (
+        <ChevronLeftIcon sx={{ fontSize: 36 }} />
+      ) : (
+        <ChevronRightIcon sx={{ fontSize: 36 }} />
+      )}
+    </IconButton>
+  );
+}
+
+function PageProgress({ pages, current }: { pages: number; current: number }) {
+  return (
+    <Box sx={{ display: "flex", gap: "2px", alignItems: "center" }}>
+      {Array.from({ length: pages }).map((_, i) => (
+        <Box
+          key={i}
+          sx={{
+            width: 12,
+            height: 2,
+            backgroundColor:
+              i === current ? tokens.color.textSecondary : "rgba(245,245,245,0.18)",
+            transition: `background-color ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
+          }}
+        />
+      ))}
     </Box>
   );
 }
 
 /**
- * Giant outlined numeral — Netflix uses a heavy slab serif with a thin white
- * stroke and a dark fill that matches the page background.
+ * Giant outlined numeral — heavy display face with a thin off-white stroke
+ * and a dark fill that matches the page background.
  *
- * Sized so its visible glyph height matches the slot height (the poster
- * lives next to it at the same height). The numeral overflows its column
- * leftward, sitting behind the previous poster's right side — that overlap
- * is the signature Top 10 look. The number "10" is narrower to keep two
- * digits roughly within the same visual footprint.
+ * The digit is vertically centered in its cell and flush-right against the
+ * poster's leading edge; the poster then carries a small negative marginLeft
+ * so it overlaps the digit by just a few pixels — the signature Top 10
+ * overlap. Two-digit "10" is sized slightly smaller so its width footprint
+ * roughly matches the single-digit cells.
  */
 function TopTenNumeral({ rank }: { rank: number }) {
   const twoDigit = rank >= 10;
@@ -256,8 +381,7 @@ function TopTenNumeral({ rank }: { rank: number }) {
         height: "100%",
         position: "relative",
         display: "flex",
-        alignItems: "flex-end",
-        // Right-anchor: the digit sits against the poster's left edge.
+        alignItems: "center",
         justifyContent: "flex-end",
         overflow: "visible",
       }}
@@ -267,20 +391,13 @@ function TopTenNumeral({ rank }: { rank: number }) {
         sx={{
           fontFamily: `'Bebas Neue', 'Oswald', 'Inter Variable', sans-serif`,
           fontWeight: 900,
-          // Tied to slotHeight (xs:130 sm:170 md:210 lg:240 xl:270) divided by
-          // Bebas Neue's cap-height ratio (~0.72) so the rendered glyph fills
-          // the slot height. "10" uses ~88% of that to keep two digits readable.
           fontSize: twoDigit
-            ? { xs: 160, sm: 210, md: 255, lg: 295, xl: 330 }
-            : { xs: 180, sm: 240, md: 290, lg: 335, xl: 375 },
+            ? { xs: 105, sm: 140, md: 170, lg: 185, xl: 200 }
+            : { xs: 130, sm: 175, md: 210, lg: 225, xl: 245 },
           lineHeight: 0.78,
           letterSpacing: "-0.06em",
           color: tokens.color.base,
-          // The Figma's signature look: black fill, thin off-white stroke.
           WebkitTextStroke: `2px ${tokens.color.textSecondary}`,
-          // Bleed the digit slightly below the slot baseline so it visually
-          // settles flush with the poster bottom.
-          transform: "translateY(8%)",
           userSelect: "none",
           pointerEvents: "none",
           whiteSpace: "nowrap",
