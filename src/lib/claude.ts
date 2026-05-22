@@ -110,6 +110,55 @@ export async function categorize(
 }
 
 /**
+ * Compress an arbitrary free-text prompt into a 3-5 word, words-only title.
+ * Used by the Switch Channels flow: while the AI thinks the row's title
+ * cycles through loading messages, then settles on the result of this call.
+ *
+ * The model is told to silently fix typos / punctuation. We additionally
+ * sanitize the response client-side to strip wrapping quotes, trailing
+ * punctuation, and any word past the 5th.
+ */
+const TITLE_SYSTEM_PROMPT = `You are renaming a Netflix-style row based on a user's prompt. Return ONLY a 3 to 5 word title in sentence case, words only. No punctuation, no quotes, no emojis, no trailing period. Capture the spirit of the prompt without echoing it verbatim. Fix typos and weird punctuation silently. Aim for evocative over literal.
+
+Examples:
+- "shows my dad would secretly love" → Quiet shows for dads
+- "stuff to watch when drunk lol" → Late night comfort watches
+- "moody horror but not gory" → Atmospheric quiet horror
+- "things from when I was a teen 2010s" → Soft 2010s nostalgia`;
+
+export async function summarizePromptToTitle(prompt: string): Promise<string> {
+  if (!client) {
+    return mockSummarize(prompt);
+  }
+  try {
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 50,
+      system: TITLE_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const block = response.content.find((b) => b.type === "text");
+    if (!block || block.type !== "text") return mockSummarize(prompt);
+    return sanitizeTitle(block.text) || mockSummarize(prompt);
+  } catch {
+    return mockSummarize(prompt);
+  }
+}
+
+function sanitizeTitle(raw: string): string {
+  const trimmed = raw
+    .trim()
+    .replace(/^["'`“”‘’]+|["'`“”‘’.,!?]+$/g, "")
+    .trim();
+  return trimmed.split(/\s+/).slice(0, 5).join(" ");
+}
+
+function mockSummarize(prompt: string): string {
+  const words = prompt.replace(/[^\w\s]/g, "").split(/\s+/).filter(Boolean);
+  return words.slice(0, 4).join(" ") || "New channel";
+}
+
+/**
  * Mock fallback for when no API key is available. Keeps the demo functional
  * but loses the AI-as-design-material story.
  */

@@ -446,6 +446,7 @@ function PromptInput({
         component="textarea"
         ref={inputRef}
         rows={1}
+        wrap="off"
         value={value}
         onChange={(e) => onChange((e.target as HTMLTextAreaElement).value)}
         onFocus={() => setFocused(true)}
@@ -473,6 +474,11 @@ function PromptInput({
           fontSize: 16,
           lineHeight: 1.4,
           transition: `padding ${dur}ms ${ease}`,
+          // On mobile the pill is narrow enough that the placeholder
+          // wraps to a second line that the 52px-tall pill then clips.
+          // Force a single line + ellipsis at xs; let sm+ behave normally.
+          whiteSpace: { xs: "nowrap", sm: "normal" },
+          textOverflow: "ellipsis",
           // Hide the textarea's scrollbar in both states — the pill should
           // read as a clean input, not a multi-line editor with chrome.
           overflow: "hidden",
@@ -482,6 +488,9 @@ function PromptInput({
           "&::placeholder": {
             color: tokens.color.textSecondary,
             opacity: 0.95,
+            whiteSpace: { xs: "nowrap", sm: "normal" },
+            textOverflow: "ellipsis",
+            overflow: "hidden",
           },
         }}
       />
