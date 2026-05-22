@@ -85,7 +85,8 @@ export function Row({
   children,
 }: {
   sectionId: string;
-  title?: string;
+  /** Row title. Accepts a string or a node (e.g. a scrambled-text animator). */
+  title?: ReactNode;
   /** Glyph rendered to the left of the title; brightens to white on title-bar hover. */
   leadingIcon?: ReactNode;
   /** Small element (text or icon) that animates in to the right of the title on hover. */

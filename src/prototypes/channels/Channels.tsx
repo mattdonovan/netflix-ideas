@@ -26,6 +26,7 @@ import { DetailModal, type DetailModalContent, type DetailModalSuggestion } from
 import { SwitchChannelsModal, type SwitchChannelOption } from "./SwitchChannelsModal";
 import { seedChannels, type Channel } from "./seedData";
 import { findInCatalog, catalog, type CatalogEntry } from "@/lib/catalog";
+import { summarizePromptToTitle } from "@/lib/claude";
 
 /**
  * Top-level Channels screen.
@@ -48,14 +49,84 @@ export function Channels() {
 
 /**
  * Per-row override applied after a user picks a new channel from the
- * SwitchChannels modal. The row first shows skeleton loaders ("loading"
- * phase), then after ~3 seconds the first slot reveals the End-of-prototype
- * card ("ended" phase). Clicking either a skeleton or the End card opens the
- * end modal and clears the override so the row resets to its original content.
+ * SwitchChannels modal.
+ *
+ * Two sources, two timings:
+ * - `curated` — picked from the modal's grid. Title is set instantly. The
+ *   row sits in `loading` for ~3s, then flips to `ended` (End-of-prototype
+ *   card in slot 0).
+ * - `prompt`  — typed into the AI input. While Claude reformats the prompt
+ *   into a 3-5 word title, the row's title cycles through fun "thinking"
+ *   messages via a scramble animation. When Claude returns, the title
+ *   scrambles to the real result and the row flips to `ended` 800ms later.
+ *
+ * Either way, clicking any skeleton or the End card resets the row.
  */
-type RowOverride = { phase: "loading" | "ended"; option: SwitchChannelOption };
+type RowOverride = {
+  phase: "loading" | "ended";
+  option: SwitchChannelOption;
+  source: "curated" | "prompt";
+};
 
 const LOADING_TO_ENDED_MS = 3000;
+// Time between the AI-returned title landing and the End-of-prototype card
+// surfacing. The pause lets the user actually read the title before the row
+// terminates.
+const PROMPT_TITLE_HOLD_MS = 800;
+// Cadence at which the prompt-flow cycles through loading messages while
+// Claude is in flight. One message lifetime = scramble-in (~600ms) +
+// hold (~500ms).
+const PROMPT_CYCLE_MS = 1100;
+// Minimum time the cycling-messages phase runs before the AI title is
+// revealed. The scramble animation is the *point* of this flow — it
+// communicates that AI is doing work. Haiku usually returns in 1–2s, which
+// is too fast to see the animation breathe. We deliberately hold the
+// thinking phase so the user sees several messages cycle through before the
+// real title lands. Total loading ≈ MIN_THINKING_MS + PROMPT_TITLE_HOLD_MS.
+const MIN_THINKING_MS = 6500;
+
+/**
+ * Loading messages cycled through the row title while the AI call is in
+ * flight. Kept varied so repeat submissions don't feel rote — each prompt
+ * picks 3-4 of these at random with no repeats inside a single cycle.
+ */
+const LOADING_MESSAGES = [
+  "Mind-melding",
+  "Synthesizing",
+  "Popping popcorn",
+  "Tuning antennas",
+  "Reading the room",
+  "Sniffing out vibes",
+  "Polishing lenses",
+  "Cross-referencing",
+  "Asking the algorithm",
+  "Decoding intent",
+  "Consulting the void",
+  "Triangulating taste",
+  "Reticulating splines",
+  "Untangling threads",
+  "Brewing the row",
+  "Channel surfing",
+  "Calibrating mood",
+  "Whispering to ranker",
+  "Cueing the projector",
+  "Pacing the lobby",
+];
+
+function pickLoadingMessages(): string[] {
+  // 5 or 6 messages — at PROMPT_CYCLE_MS=1100 and MIN_THINKING_MS=6500 the
+  // user sees ~6 cycles, so we want enough variety to (mostly) avoid repeats
+  // inside a single submission while still feeling spontaneous across runs.
+  const count = 5 + Math.floor(Math.random() * 2);
+  const pool = [...LOADING_MESSAGES];
+  const out: string[] = [];
+  for (let i = 0; i < count && pool.length > 0; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    out.push(pool[idx]);
+    pool.splice(idx, 1);
+  }
+  return out;
+}
 
 function ChannelsContent() {
   const [channels] = useState<Channel[]>(seedChannels);
@@ -68,15 +139,33 @@ function ChannelsContent() {
   // reset (skeleton clicked) before the timer fires, or replaced by a new
   // switch before the previous one resolves.
   const phaseTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // Per-row prompt-cycle intervals. Tracked separately so prompt submits
+  // can stop cycling messages without disturbing the phase timer.
+  const cycleTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
 
   useEffect(() => {
     return () => {
       Object.values(phaseTimersRef.current).forEach(clearTimeout);
+      Object.values(cycleTimersRef.current).forEach(clearInterval);
       phaseTimersRef.current = {};
+      cycleTimersRef.current = {};
     };
   }, []);
 
-  function scheduleEndPhase(channelId: string, optionId: string) {
+  function clearRowTimers(channelId: string) {
+    const t = phaseTimersRef.current[channelId];
+    if (t) {
+      clearTimeout(t);
+      delete phaseTimersRef.current[channelId];
+    }
+    const c = cycleTimersRef.current[channelId];
+    if (c) {
+      clearInterval(c);
+      delete cycleTimersRef.current[channelId];
+    }
+  }
+
+  function scheduleEndPhase(channelId: string, optionId: string, delayMs: number) {
     const existing = phaseTimersRef.current[channelId];
     if (existing) clearTimeout(existing);
     phaseTimersRef.current[channelId] = setTimeout(() => {
@@ -89,40 +178,95 @@ function ChannelsContent() {
         if (current.phase === "ended") return prev;
         return { ...prev, [channelId]: { ...current, phase: "ended" } };
       });
-    }, LOADING_TO_ENDED_MS);
+    }, delayMs);
   }
 
   function handlePickChannel(option: SwitchChannelOption) {
     if (!switchTarget) return;
     const channelId = switchTarget.id;
-    setRowOverrides((prev) => ({ ...prev, [channelId]: { phase: "loading", option } }));
-    scheduleEndPhase(channelId, option.id);
+    clearRowTimers(channelId);
+    setRowOverrides((prev) => ({
+      ...prev,
+      [channelId]: { phase: "loading", option, source: "curated" },
+    }));
+    scheduleEndPhase(channelId, option.id, LOADING_TO_ENDED_MS);
   }
 
-  // Free-text prompts from the modal's AI input use the same row-override
-  // path as the curated channel picks. The prompt becomes the row's new
-  // label; the rest of the SwitchChannelOption shape is filled in so the
-  // override carries a stable identity.
+  // Free-text prompts from the modal's AI input run a different flow than
+  // curated picks: the title cycles through fun "thinking" messages while
+  // Claude reformats the prompt into a 3-5 word title; once that lands the
+  // row holds for PROMPT_TITLE_HOLD_MS before flipping to `ended`.
   function handleSubmitPrompt(prompt: string) {
     if (!switchTarget) return;
     const channelId = switchTarget.id;
+    const optionId = `prompt-${Date.now()}`;
+    const messageQueue = pickLoadingMessages();
+
+    clearRowTimers(channelId);
+
     const option: SwitchChannelOption = {
-      id: `prompt-${Date.now()}`,
-      title: prompt,
+      id: optionId,
+      title: messageQueue[0],
       description: prompt,
       accent: ["#FF8C00", "#7B2FFF"],
     };
-    setRowOverrides((prev) => ({ ...prev, [channelId]: { phase: "loading", option } }));
-    scheduleEndPhase(channelId, option.id);
+
+    setRowOverrides((prev) => ({
+      ...prev,
+      [channelId]: { phase: "loading", option, source: "prompt" },
+    }));
+
+    // Cycle through the message queue while the AI call is in flight.
+    let messageIndex = 0;
+    cycleTimersRef.current[channelId] = setInterval(() => {
+      messageIndex = (messageIndex + 1) % messageQueue.length;
+      setRowOverrides((prev) => {
+        const current = prev[channelId];
+        if (!current || current.option.id !== optionId) return prev;
+        if (current.phase !== "loading") return prev;
+        return {
+          ...prev,
+          [channelId]: {
+            ...current,
+            option: { ...current.option, title: messageQueue[messageIndex] },
+          },
+        };
+      });
+    }, PROMPT_CYCLE_MS);
+
+    // Kick off the AI rename in parallel with a minimum-thinking timer. The
+    // scramble animation only reads as "AI working" if it gets to breathe —
+    // Haiku usually returns in 1–2s, so we floor the cycling phase to
+    // MIN_THINKING_MS. On both resolution + min-elapsed, stop the cycle,
+    // swap to the final title, and schedule the end-phase flip.
+    const aiPromise = summarizePromptToTitle(prompt);
+    const minDelay = new Promise<void>((resolve) =>
+      setTimeout(resolve, MIN_THINKING_MS),
+    );
+    Promise.all([aiPromise, minDelay]).then(([finalTitle]) => {
+      const interval = cycleTimersRef.current[channelId];
+      if (interval) {
+        clearInterval(interval);
+        delete cycleTimersRef.current[channelId];
+      }
+      setRowOverrides((prev) => {
+        const current = prev[channelId];
+        if (!current || current.option.id !== optionId) return prev;
+        return {
+          ...prev,
+          [channelId]: {
+            ...current,
+            option: { ...current.option, title: finalTitle },
+          },
+        };
+      });
+      scheduleEndPhase(channelId, optionId, PROMPT_TITLE_HOLD_MS);
+    });
   }
 
   function handleSkeletonClick(channelId: string) {
     setEndModalOpen(true);
-    const timer = phaseTimersRef.current[channelId];
-    if (timer) {
-      clearTimeout(timer);
-      delete phaseTimersRef.current[channelId];
-    }
+    clearRowTimers(channelId);
     setRowOverrides((prev) => {
       if (!prev[channelId]) return prev;
       const { [channelId]: _, ...rest } = prev;
@@ -656,30 +800,56 @@ function Hero({ onAboutClick }: { onAboutClick: () => void }) {
           maxWidth: { xs: "100%", md: "60%", lg: "50%" },
         }}
       >
+        {/*
+          Mobile collapses the icon-above-title stack into a single inline
+          row: ~1/3-size icon next to a ~half-size title. From sm up, the
+          original Netflix-billboard treatment returns (full-size icon
+          stacked above the h1).
+        */}
         <Box
           sx={{
-            color: tokens.color.textPrimary,
-            mb: "clamp(8px, 1vw, 14px)",
-            filter: "drop-shadow(0 4px 24px rgba(0,0,0,0.55))",
-          }}
-        >
-          <ChannelBarsIcon size={64} />
-        </Box>
-
-        <Typography
-          component="h1"
-          sx={{
-            fontSize: "clamp(40px, 6.4vw, 88px)",
-            lineHeight: 1,
-            color: tokens.color.textPrimary,
-            fontWeight: tokens.type.weight.bold,
-            letterSpacing: "-0.02em",
-            textShadow: "0 4px 24px rgba(0,0,0,0.55)",
+            display: "flex",
+            flexDirection: { xs: "row", sm: "column" },
+            alignItems: { xs: "center", sm: "flex-start" },
+            gap: { xs: "8px", sm: 0 },
             mb: "clamp(20px, 2.2vw, 32px)",
           }}
         >
-          Switch Channels
-        </Typography>
+          <Box
+            sx={{
+              color: tokens.color.textPrimary,
+              mb: { xs: 0, sm: "clamp(8px, 1vw, 14px)" },
+              filter: "drop-shadow(0 4px 24px rgba(0,0,0,0.55))",
+              display: { xs: "inline-flex", sm: "none" },
+            }}
+          >
+            <ChannelBarsIcon size={21} />
+          </Box>
+          <Box
+            sx={{
+              color: tokens.color.textPrimary,
+              mb: { xs: 0, sm: "clamp(8px, 1vw, 14px)" },
+              filter: "drop-shadow(0 4px 24px rgba(0,0,0,0.55))",
+              display: { xs: "none", sm: "inline-flex" },
+            }}
+          >
+            <ChannelBarsIcon size={64} />
+          </Box>
+
+          <Typography
+            component="h1"
+            sx={{
+              fontSize: { xs: 20, sm: "clamp(40px, 6.4vw, 88px)" },
+              lineHeight: 1,
+              color: tokens.color.textPrimary,
+              fontWeight: tokens.type.weight.bold,
+              letterSpacing: "-0.02em",
+              textShadow: "0 4px 24px rgba(0,0,0,0.55)",
+            }}
+          >
+            Switch Channels
+          </Typography>
+        </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: "clamp(8px, 1vw, 16px)" }}>
           <Button
@@ -834,6 +1004,65 @@ function Footer() {
  */
 const TARGET_TILE_COUNT = 12;
 
+const SCRAMBLE_CHARS =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&";
+
+/**
+ * Per-character scramble-in animation. Each character resolves to its final
+ * value at a staggered threshold so the title reveals left-to-right while the
+ * unresolved tail flickers through random glyphs. Used to dress the title
+ * swaps during the prompt-driven switch flow: each new "thinking" message and
+ * the final AI-returned title scramble in instead of cutting.
+ */
+function ScrambleText({
+  target,
+  durationMs = 600,
+}: {
+  target: string;
+  durationMs?: number;
+}) {
+  const [displayed, setDisplayed] = useState(target);
+  const displayedRef = useRef(target);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    displayedRef.current = displayed;
+  }, [displayed]);
+
+  useEffect(() => {
+    const to = target;
+    if (displayedRef.current === to) return;
+    let start: number | null = null;
+    const tick = (now: number) => {
+      if (start === null) start = now;
+      const t = Math.min(1, (now - start) / durationMs);
+      const len = to.length;
+      const out: string[] = [];
+      for (let i = 0; i < len; i++) {
+        const ch = to[i];
+        const threshold = (i + 1) / (len + 1);
+        if (ch === " " || t >= threshold) {
+          out.push(ch);
+        } else {
+          out.push(SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)]);
+        }
+      }
+      setDisplayed(out.join(""));
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        setDisplayed(to);
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [target, durationMs]);
+
+  return <>{displayed}</>;
+}
+
 function ChannelRow({
   channel,
   override,
@@ -864,6 +1093,11 @@ function ChannelRow({
   // loading phase; once the End card surfaces, it stops to signal arrival.
   const displayTitle = override ? override.option.title : channel.category.title;
   const leadingIcon = <ChannelBarsIcon spinning={override?.phase === "loading"} />;
+  // Prompt-driven switches scramble each title change (cycling "thinking"
+  // messages and the final AI-returned title). Curated picks change the
+  // title exactly once and don't need the animation.
+  const titleNode: ReactNode =
+    override?.source === "prompt" ? <ScrambleText target={displayTitle} /> : displayTitle;
 
   if (override) {
     // After a row is switched, drop its original layout (Top 10 numerals etc.).
@@ -876,7 +1110,7 @@ function ChannelRow({
       <Row
         sectionId={sectionId}
         itemCount={slotCount}
-        title={displayTitle}
+        title={titleNode}
         leadingIcon={leadingIcon}
         onTitleClick={onRequestSwitch}
         itemsPerView={{ xs: 2, sm: 3, md: 4, lg: 5, xl: 6 }}
