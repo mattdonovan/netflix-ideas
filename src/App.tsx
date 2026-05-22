@@ -1,12 +1,19 @@
 import { BrowserRouter, Routes, Route, useParams, useLocation, Navigate, Link } from "react-router-dom";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
-import { Box, Typography } from "@mui/material";
+import { Box, Tooltip, Typography } from "@mui/material";
+import { useState } from "react";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { hawkinsTheme } from "@/theme/hawkins";
 import { tokens } from "@/theme/tokens";
-import { Channels } from "@/prototypes/channels/Channels";
+import { Channels, ChannelBarsIcon } from "@/prototypes/channels/Channels";
+import { IdeaHopperModal } from "@/prototypes/idea-hopper/IdeaHopperModal";
 import { ExperimentsIndex, ExperimentSingle, ExperimentCompare } from "@/experiments/Experiments";
-import { findInCatalog } from "@/lib/catalog";
+import mattAvatarLargeUrl from "@/assets/matt-avatar-large.jpg";
+import hopperUrl from "@/assets/hopper.png";
+
+const GITHUB_URL = "https://github.com/mattdonovan/netflix-ideas";
+const PORTFOLIO_URL = "https://mattdonovan.me";
 
 export default function App() {
   return (
@@ -39,298 +46,296 @@ function SingleExperimentRoute() {
 }
 
 /**
- * Featured title for the home hero. Picked by hand for backdrop quality —
- * Blade Runner 2049 has one of the strongest backdrop images in the catalog
- * and matches the "atmospheric, cinematic" thesis of this prototype set.
- * Swap with another catalog entry to rotate.
+ * Home — Netflix "Who's watching?" picker, repurposed as the landing screen
+ * for this prototype set. Each tile maps to one of the prototypes / surfaces:
+ * Channels (the built one), Idea Hopper (the parking lot), and Matt (the
+ * about-the-author profile menu, identical to the one in the Channels header).
  */
-const HERO_FEATURE = {
-  catalogTitle: "Blade Runner 2049",
-  year: 2017,
-  pitch: "Self-curated discovery and content-as-invitation, designed for the couch.",
-  tagline: "Two feature prototypes for Netflix, built TV-first.",
-};
-
 function Home() {
-  const feature = findInCatalog(HERO_FEATURE.catalogTitle, HERO_FEATURE.year);
+  const [ideaHopperOpen, setIdeaHopperOpen] = useState(false);
 
   return (
     <Box
       sx={{
         minHeight: "100vh",
-        backgroundColor: tokens.color.base,
+        backgroundColor: "#141414",
         color: tokens.color.textPrimary,
         fontFamily: tokens.type.family.sans,
         display: "flex",
         flexDirection: "column",
+        alignItems: "center",
+        paddingTop: "140px",
+        paddingBottom: `${tokens.space["2xl"]}px`,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      <HomeHero feature={feature} />
+      {/* Top fade — matches the Figma HeaderLinearGradient. */}
+      <Box
+        sx={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 68,
+          background: "linear-gradient(180deg, rgba(0,0,0,0.7) 12.5%, rgba(0,0,0,0) 100%)",
+          pointerEvents: "none",
+        }}
+      />
 
       <Box
         sx={{
-          padding: {
-            xs: `${tokens.space.lg}px`,
-            sm: `${tokens.space.xl}px`,
-            md: `${tokens.space["2xl"]}px`,
-            lg: `${tokens.space["3xl"]}px`,
-          },
           display: "flex",
           flexDirection: "column",
-          gap: `${tokens.space.xl}px`,
-          flex: 1,
+          alignItems: "center",
+          gap: `${tokens.space["2xl"]}px`,
         }}
       >
-        <Box
+        <Typography
           sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "1fr",
-              md: "repeat(auto-fit, minmax(340px, 1fr))",
-            },
-            gap: `${tokens.space.lg}px`,
-            maxWidth: 1200,
+            fontSize: { xs: 36, sm: 44, md: 50 },
+            lineHeight: 1,
+            color: "#fff",
+            textAlign: "center",
+            fontWeight: tokens.type.weight.regular,
+            letterSpacing: "-0.01em",
           }}
         >
-          <PrototypeCard
-            to="/channels"
-            tag="Prototype 1"
-            title="Channels"
-            status="First pass"
-            description="Replace the predefined recommendation rows with rows you describe in your own words. Speak or type. The AI assigns a category, the Ranker fills it in, and you can tweak until it's right."
-          />
-          <PrototypeCard
-            to="/channels"
-            tag="Prototype 2"
-            title="Invite"
-            status="Planned"
-            description="Share a show or movie with a friend via QR → mobile companion page → unique link → free sample → recommendation graph. Not yet built."
-            disabled
-          />
-          <PrototypeCard
-            to="/experiments"
-            tag="Sandbox"
-            title="Experiments"
-            status="Open"
-            description="Side-by-side variants of the prototypes. Compare layouts, motion, and copy without touching the canonical versions."
-          />
+          Netflix Ideas
+        </Typography>
+
+        <Box
+          sx={{
+            display: "flex",
+            gap: { xs: `${tokens.space.lg}px`, sm: "29px" },
+            alignItems: "flex-start",
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <ChannelsTile />
+          <IdeaHopperTile onOpen={() => setIdeaHopperOpen(true)} />
+          <MattTile />
         </Box>
 
-        <Box sx={{ marginTop: "auto", paddingTop: `${tokens.space.xl}px`, color: tokens.color.textTertiary }}>
-          <Typography sx={{ fontSize: tokens.type.scale.micro.size, letterSpacing: tokens.type.scale.micro.letterSpacing, textTransform: "uppercase" }}>
-            Click a card or, inside Channels, use ← → ↑ ↓ to navigate · Enter to edit · T to talk · Esc to close
-          </Typography>
-        </Box>
+        <ViewGithubButton />
       </Box>
+
+      <IdeaHopperModal open={ideaHopperOpen} onClose={() => setIdeaHopperOpen(false)} />
     </Box>
   );
 }
 
 /**
- * Netflix-style hero billboard. Full-bleed backdrop image, dark gradient on
- * the left for text legibility, title + tagline + CTA pair. The featured
- * artwork comes from the enriched catalog (TMDB backdrops).
- *
- * Why the brand red sits on the primary CTA here and not on the system:
- * `tokens.color.brand` (#E50914) is the "intentional quotation" — Netflix red
- * on a Netflix-shaped hero is the joke. The system accent (#E4404C) stays
- * the voice for everything else.
+ * Shared tile shell — 144px square + 22px label below, matching the Figma
+ * LargeAvatar pattern. Renders as a button (or Link via render prop) so it's
+ * keyboard-accessible. Hover lifts the border, mirroring the existing
+ * PrototypeCard pattern on the previous home.
  */
-function HomeHero({ feature }: { feature: ReturnType<typeof findInCatalog> }) {
-  const backdrop = feature?.backdropUrl;
-  return (
+function TileShell({
+  label,
+  children,
+  onClick,
+  asLink,
+  externalHref,
+  ariaLabel,
+}: {
+  label: string;
+  children: React.ReactNode;
+  onClick?: () => void;
+  asLink?: string;
+  externalHref?: string;
+  ariaLabel?: string;
+}) {
+  const tile = (
     <Box
+      component={onClick ? "button" : "div"}
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      aria-label={ariaLabel || label}
+      className="picker-tile"
       sx={{
         position: "relative",
-        width: "100%",
-        height: { xs: 520, md: 640, lg: 720 },
+        width: 144,
+        height: 144,
+        borderRadius: `${tokens.radius.sm}px`,
         overflow: "hidden",
-        display: "flex",
-        alignItems: "flex-end",
-        backgroundColor: tokens.color.surfaceLow,
-        backgroundImage: backdrop ? `url("${backdrop}")` : undefined,
-        backgroundSize: "cover",
-        backgroundPosition: "center 25%",
+        cursor: "pointer",
+        padding: 0,
+        border: "2px solid transparent",
+        background: tokens.color.surfaceLow,
+        color: "inherit",
+        font: "inherit",
+        display: "block",
+        transition: `border-color ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
+        "&:hover": { borderColor: "#fff" },
+        // Trigger Channel bars hue-cycle when hovering the Channels tile.
+        "&:hover .row-title-icon path": {
+          animationName: "channelBarCycle",
+          animationDuration: "1.4s",
+          animationTimingFunction: "linear",
+          animationIterationCount: "infinite",
+        },
       }}
     >
-      {/* Left-to-right legibility gradient over the artwork */}
-      <Box
-        sx={{
-          position: "absolute",
-          inset: 0,
-          background: `linear-gradient(90deg, ${tokens.color.base} 0%, rgba(11,11,11,0.85) 30%, rgba(11,11,11,0.2) 60%, rgba(11,11,11,0) 100%)`,
-        }}
-      />
-      {/* Bottom fade into the page */}
-      <Box
-        sx={{
-          position: "absolute",
-          inset: 0,
-          background: `linear-gradient(180deg, rgba(11,11,11,0) 60%, ${tokens.color.base} 100%)`,
-        }}
-      />
+      {children}
+    </Box>
+  );
 
-      <Box
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "11px" }}>
+      {asLink ? (
+        <Link to={asLink} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+          {tile}
+        </Link>
+      ) : externalHref ? (
+        <a
+          href={externalHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={ariaLabel || label}
+          style={{ textDecoration: "none", color: "inherit", display: "block" }}
+        >
+          {tile}
+        </a>
+      ) : (
+        tile
+      )}
+      <Typography
         sx={{
-          position: "relative",
-          padding: {
-            xs: `${tokens.space.lg}px`,
-            sm: `${tokens.space.xl}px`,
-            md: `${tokens.space["2xl"]}px`,
-            lg: `${tokens.space["3xl"]}px`,
-          },
-          maxWidth: 820,
-          display: "flex",
-          flexDirection: "column",
-          gap: `${tokens.space.md}px`,
+          fontSize: 18,
+          lineHeight: "22px",
+          color: "#808080",
+          fontWeight: tokens.type.weight.regular,
+          height: 22,
         }}
       >
-        <Typography sx={{ fontSize: tokens.type.scale.micro.size, color: tokens.color.brand, letterSpacing: tokens.type.scale.micro.letterSpacing, textTransform: "uppercase", fontWeight: tokens.type.weight.semibold }}>
-          netflix-ideas
-        </Typography>
-        <Typography
-          sx={{
-            fontSize: { xs: 40, sm: 56, md: 80, lg: tokens.type.scale.display.size },
-            lineHeight: tokens.type.scale.display.lineHeight,
-            letterSpacing: tokens.type.scale.display.letterSpacing,
-            fontWeight: tokens.type.weight.bold,
-          }}
-        >
-          {HERO_FEATURE.tagline}
-        </Typography>
-        <Typography
-          sx={{
-            fontSize: { xs: tokens.type.scale.h4.size, md: tokens.type.scale.h3.size },
-            color: tokens.color.textSecondary,
-            lineHeight: 1.3,
-            fontWeight: tokens.type.weight.light,
-            maxWidth: 720,
-          }}
-        >
-          {HERO_FEATURE.pitch}
-        </Typography>
-
-        <Box sx={{ display: "flex", gap: `${tokens.space.sm}px`, mt: `${tokens.space.md}px`, flexWrap: "wrap" }}>
-          <Link to="/channels" style={{ textDecoration: "none" }}>
-            <Box
-              sx={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: `${tokens.space.xs}px`,
-                backgroundColor: tokens.color.brand,
-                color: tokens.color.textPrimary,
-                fontWeight: tokens.type.weight.semibold,
-                fontSize: tokens.type.scale.body.size,
-                paddingInline: `${tokens.space.lg}px`,
-                paddingBlock: `${tokens.space.sm}px`,
-                borderRadius: `${tokens.radius.sm}px`,
-                cursor: "pointer",
-                transition: `background-color ${tokens.motion.duration.press}ms ${tokens.motion.easing.press}`,
-                "&:hover": { backgroundColor: "#F40612" },
-              }}
-            >
-              <span aria-hidden style={{ fontSize: tokens.type.scale.h4.size, lineHeight: 1 }}>▶</span>
-              Open Channels
-            </Box>
-          </Link>
-          <Link to="/experiments" style={{ textDecoration: "none" }}>
-            <Box
-              sx={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: `${tokens.space.xs}px`,
-                backgroundColor: "rgba(245,245,245,0.16)",
-                color: tokens.color.textPrimary,
-                fontWeight: tokens.type.weight.semibold,
-                fontSize: tokens.type.scale.body.size,
-                paddingInline: `${tokens.space.lg}px`,
-                paddingBlock: `${tokens.space.sm}px`,
-                borderRadius: `${tokens.radius.sm}px`,
-                cursor: "pointer",
-                transition: `background-color ${tokens.motion.duration.press}ms ${tokens.motion.easing.press}`,
-                "&:hover": { backgroundColor: "rgba(245,245,245,0.24)" },
-              }}
-            >
-              <span aria-hidden style={{ fontSize: tokens.type.scale.h4.size, lineHeight: 1 }}>ⓘ</span>
-              More info
-            </Box>
-          </Link>
-        </Box>
-      </Box>
-
-      {/* Featured-artwork attribution, bottom right */}
-      {feature && (
-        <Typography
-          sx={{
-            position: "absolute",
-            right: { xs: tokens.space.lg, md: tokens.space["2xl"] },
-            bottom: tokens.space.lg,
-            fontSize: tokens.type.scale.micro.size,
-            color: tokens.color.textTertiary,
-            letterSpacing: tokens.type.scale.micro.letterSpacing,
-            textTransform: "uppercase",
-            fontWeight: tokens.type.weight.semibold,
-          }}
-        >
-          Hero artwork · {feature.title}
-        </Typography>
-      )}
+        {label}
+      </Typography>
     </Box>
   );
 }
 
-function PrototypeCard({
-  to,
-  tag,
-  title,
-  status,
-  description,
-  disabled,
-}: {
-  to: string;
-  tag: string;
-  title: string;
-  status: string;
-  description: string;
-  disabled?: boolean;
-}) {
-  const card = (
+function ChannelsTile() {
+  return (
+    <Tooltip title="Open Channels" placement="bottom" arrow>
+      <Box sx={{ display: "inline-block" }}>
+        <TileShell label="Channels" asLink="/channels">
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(ellipse 70% 70% at 50% 55%, #1F1B2E 0%, #0A0A0C 80%)",
+              display: "grid",
+              placeItems: "center",
+              color: "#808080",
+            }}
+          >
+            <Box className="row-title-icon" sx={{ display: "flex" }}>
+              <ChannelBarsIcon size={80} />
+            </Box>
+          </Box>
+        </TileShell>
+      </Box>
+    </Tooltip>
+  );
+}
+
+function IdeaHopperTile({ onOpen }: { onOpen: () => void }) {
+  return (
+    <Tooltip title="Open Idea Hopper" placement="bottom" arrow>
+      <Box sx={{ display: "inline-block" }}>
+        <TileShell label="Idea Hopper" onClick={onOpen}>
+          <Box
+            component="img"
+            src={hopperUrl}
+            alt=""
+            sx={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center 18%",
+            }}
+          />
+        </TileShell>
+      </Box>
+    </Tooltip>
+  );
+}
+
+/**
+ * Matt tile — 144px portrait that opens mattdonovan.me in a new tab. On
+ * hover the image darkens and a large "open in new tab" glyph fades in at
+ * center, signalling that the click leaves the site.
+ */
+function MattTile() {
+  return (
+    <Tooltip title="Visit Portfolio" placement="bottom" arrow>
+      <Box sx={{ display: "inline-block" }}>
+        <TileShell label="Matt" externalHref={PORTFOLIO_URL} ariaLabel="Visit Portfolio">
+          <Box
+            component="img"
+            src={mattAvatarLargeUrl}
+            alt=""
+            sx={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
+          <Box
+            className="matt-tile-hover"
+            sx={{
+              position: "absolute",
+              inset: 0,
+              display: "grid",
+              placeItems: "center",
+              backgroundColor: "rgba(0,0,0,0.55)",
+              color: "#fff",
+              opacity: 0,
+              transition: `opacity ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
+              pointerEvents: "none",
+              ".picker-tile:hover &": { opacity: 1 },
+            }}
+          >
+            <OpenInNewIcon sx={{ fontSize: 48 }} />
+          </Box>
+        </TileShell>
+      </Box>
+    </Tooltip>
+  );
+}
+
+function ViewGithubButton() {
+  return (
     <Box
+      component="a"
+      href={GITHUB_URL}
+      target="_blank"
+      rel="noopener noreferrer"
       sx={{
-        backgroundColor: tokens.color.surfaceLow,
-        border: `2px solid ${tokens.color.border}`,
-        borderRadius: `${tokens.radius.md}px`,
-        padding: `${tokens.space.lg}px`,
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        gap: `${tokens.space.sm}px`,
-        transition: `border-color ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}, transform ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.5 : 1,
-        "&:hover": {
-          borderColor: disabled ? tokens.color.border : tokens.color.textPrimary,
-          transform: disabled ? "none" : "translateY(-2px)",
-        },
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: 40,
+        minWidth: 178,
+        paddingInline: "16px",
+        border: "1px solid #808080",
+        color: "#808080",
+        fontSize: 17,
+        fontWeight: tokens.type.weight.regular,
+        textDecoration: "none",
+        backgroundColor: "transparent",
+        transition: `color ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}, border-color ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
+        "&:hover": { color: "#fff", borderColor: "#fff" },
       }}
     >
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <Typography sx={{ fontSize: tokens.type.scale.micro.size, color: tokens.color.textTertiary, letterSpacing: tokens.type.scale.micro.letterSpacing, textTransform: "uppercase", fontWeight: tokens.type.weight.semibold }}>
-          {tag}
-        </Typography>
-        <Typography sx={{ fontSize: tokens.type.scale.micro.size, color: status === "First pass" ? tokens.color.accent : tokens.color.textTertiary, letterSpacing: tokens.type.scale.micro.letterSpacing, textTransform: "uppercase", fontWeight: tokens.type.weight.semibold }}>
-          {status}
-        </Typography>
-      </Box>
-      <Typography sx={{ fontSize: tokens.type.scale.h2.size, lineHeight: 1.1, letterSpacing: tokens.type.scale.h2.letterSpacing, fontWeight: tokens.type.weight.bold, color: tokens.color.textPrimary }}>
-        {title}
-      </Typography>
-      <Typography sx={{ fontSize: tokens.type.scale.bodySmall.size, color: tokens.color.textSecondary, lineHeight: 1.4 }}>
-        {description}
-      </Typography>
+      View GitHub
     </Box>
   );
-  if (disabled) return card;
-  return <Link to={to} style={{ textDecoration: "none", color: "inherit" }}>{card}</Link>;
 }

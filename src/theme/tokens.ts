@@ -19,10 +19,12 @@ export const tokens = {
    * without needing borders.
    */
   color: {
-    // Backgrounds
-    base: "#0B0B0B",
-    surfaceLow: "#141414",
-    surfaceMid: "#1F1F1F",
+    // Backgrounds — `base` is the page background. Matches Netflix's real
+    // home-page surface color (#141414). Higher surfaces step up from there
+    // to give cards / panels visual lift on the same flat background.
+    base: "#141414",
+    surfaceLow: "#1A1A1A",
+    surfaceMid: "#222222",
     surfaceHigh: "#2A2A2A",
 
     // Text — never pure white (#F5F5F5 is the Netflix-region off-white)
@@ -86,7 +88,7 @@ export const tokens = {
   grouping: {
     cardGap: 8,
     rowGap: 32,
-    rowReelPadding: 56,
+    rowReelPadding: 16,
   },
 
   /**

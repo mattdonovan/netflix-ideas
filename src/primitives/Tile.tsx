@@ -1,5 +1,5 @@
 import { Box, Typography } from "@mui/material";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import AddIcon from "@mui/icons-material/Add";
 import ThumbUpOffAltIcon from "@mui/icons-material/ThumbUpOffAlt";
@@ -7,6 +7,9 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import VolumeOffIcon from "@mui/icons-material/VolumeOff";
 import { tokens } from "@/theme/tokens";
 import { useFocusContext } from "@/lib/focus";
+
+const HOVER_SCALE = 1.32;
+const HOVER_DURATION = 220;
 
 export type TileSize = "sm" | "md" | "lg";
 export type TileAspect = "boxart" | "poster";
@@ -47,16 +50,17 @@ export type TileExpansion = {
  * Content tile.
  *
  * Behavior model:
- *   - Slot reserves only the image's footprint in the row's layout.
- *   - The card is absolutely positioned within the slot — when it scales up
- *     and reveals its info panel on hover/focus, neighbors and the row
- *     beneath stay put. Pure overlay, no layout shift.
- *   - Hover is a *visual* preview only: it pops the card and reveals the
- *     panel, but does NOT advance the row's focused index.
- *   - Keyboard focus pops the card AND draws a ring around it. The ring
+ *   - The resting card sits in the slot at scale 1 and never moves or scales.
+ *   - On hover/focus a separate "hover partial" mounts on top — the full
+ *     expanded card view (backdrop image + info panel). It appears immediately
+ *     at opacity 1, scale 1 (so it visually replaces the resting card with no
+ *     fade), then scales up to 1.32. The resting card stays underneath but
+ *     gets covered by the partial.
+ *   - On unhover, the partial scales back down AND fades opacity to 0 in
+ *     parallel, then unmounts. This is what makes the transition feel like
+ *     the card is "growing" without the resting card itself ever moving.
+ *   - Keyboard focus pops the partial AND draws a ring around it. The ring
  *     only appears when the last input was a keystroke (keyboard mode).
- *   - Click on a tile sets focus too, but only via keyboard's setFocus
- *     contract — wired by the caller, not by this component.
  */
 export function Tile({
   size = "md",
@@ -73,6 +77,7 @@ export function Tile({
   onClick,
   responsive = false,
   fillHeight = false,
+  edgeAnchor,
 }: {
   size?: TileSize;
   aspect?: TileAspect;
@@ -80,39 +85,106 @@ export function Tile({
   color?: string;
   artwork?: ReactNode;
   artworkUrl?: string;
-  /** Optional alternate artwork shown when the card is expanded (hover/focus).
-   *  Used by the Top 10 row, which shows a portrait poster at rest but
-   *  morphs into a landscape backdrop on expand. */
   expandedArtworkUrl?: string;
-  /** When true, the expanded card switches from `aspect` to 16:9 boxart.
-   *  Combined with `expandedArtworkUrl` it lets a Top 10 poster grow into
-   *  a landscape preview matching the other rows' layout. */
   expandsToLandscape?: boolean;
   badge?: TileBadge;
   expansion?: TileExpansion;
   focused: boolean;
   onClick?: () => void;
   responsive?: boolean;
-  /** When true, the slot's shape is driven by the parent (height: 100%) rather
-   *  than aspectRatio. Used by TopTenRow where the slot is height-locked. */
   fillHeight?: boolean;
+  /**
+   * Anchor the hover-bloom to one side of the tile instead of scaling from
+   * center. Used for the first card in a row ("left", grows up/down/right)
+   * and the last card ("right", grows up/down/left) so the bloom never
+   * extends past the row's viewport edge.
+   */
+  edgeAnchor?: "left" | "right";
 }) {
   const dims = TILE_DIMENSIONS[aspect][size];
-  const hasImage = !artwork && (artworkUrl || expandedArtworkUrl);
+  const hasImage = !artwork && Boolean(artworkUrl || expandedArtworkUrl);
   const ctx = useFocusContext();
   const inputMode = ctx.state.inputMode;
 
   const [hovered, setHovered] = useState(false);
   const expanded = hovered || focused;
-  // Focus ring only when keyboard navigation is the active modality —
-  // mouse hover gets the card-pop but no ring.
   const showRing = focused && inputMode === "keyboard";
 
-  // Default + expanded aspect. Most tiles use the same for both; Top 10
-  // posters morph from 2:3 to 16:9 on expand.
+  // Hover-overlay lifecycle. `mounted` controls whether the partial is in the
+  // DOM at all; `phase` controls its visual state:
+  //   - "idle" (just-mounted): scale 1, opacity 1, transition: none — the
+  //     first paint lands here so the partial visually replaces the resting
+  //     card without any fade.
+  //   - "growing": scale 1.32, opacity 1, transition: transform only — opacity
+  //     was already 1 so it doesn't move; only the scale animates.
+  //   - "shrinking" (unhover): scale 1, opacity 0, transition: both — scale and
+  //     opacity animate together; partial unmounts when the timer fires.
+  const [overlayMounted, setOverlayMounted] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "growing" | "shrinking">("idle");
+
+  useEffect(() => {
+    if (expanded) {
+      setOverlayMounted(true);
+      setPhase("idle");
+      // Two rAFs: paint the idle state first, then flip to growing so the
+      // browser sees a real value change with a transition rule that includes
+      // transform — that's what triggers the scale animation.
+      let id1 = 0;
+      let id2 = 0;
+      id1 = requestAnimationFrame(() => {
+        id2 = requestAnimationFrame(() => setPhase("growing"));
+      });
+      return () => {
+        cancelAnimationFrame(id1);
+        cancelAnimationFrame(id2);
+      };
+    } else {
+      if (!overlayMounted) return;
+      setPhase("shrinking");
+      const t = setTimeout(() => {
+        setOverlayMounted(false);
+        setPhase("idle");
+      }, HOVER_DURATION + 40);
+      return () => clearTimeout(t);
+    }
+    // overlayMounted intentionally omitted: we only react to expanded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded]);
+
   const restAspect = aspect === "boxart" ? "16 / 9" : "2 / 3";
-  const liveAspect = expanded && expandsToLandscape ? "16 / 9" : restAspect;
-  const liveArtworkUrl = expanded && expandedArtworkUrl ? expandedArtworkUrl : artworkUrl;
+  const isLandscapeExpansion = !!expandsToLandscape;
+  // The hover partial enters at its final landscape shape immediately (no
+  // morph). Aspect-ratio doesn't animate — only opacity (snap on in, fade on
+  // out) and scale do.
+  const overlayAspect = isLandscapeExpansion ? "16 / 9" : restAspect;
+  const overlayArtworkUrl =
+    isLandscapeExpansion && expandedArtworkUrl ? expandedArtworkUrl : artworkUrl;
+
+  const easing = tokens.motion.easing.focus;
+  const overlayTransition =
+    phase === "growing"
+      ? `transform ${HOVER_DURATION}ms ${easing}`
+      : phase === "shrinking"
+        ? `transform ${HOVER_DURATION}ms ${easing}, opacity ${HOVER_DURATION}ms ${easing}`
+        : "none";
+  const baseScale = phase === "growing" ? `scale(${HOVER_SCALE})` : "scale(1)";
+  // Landscape (Top 10) overlay defaults to anchoring via `left: 50%` + a
+  // pre-multiplied `translateX(-50%)` to center horizontally. When an
+  // edgeAnchor is set, the overlay instead pins to that side directly so
+  // the bloom grows inward toward the row's center.
+  const overlayTransform = isLandscapeExpansion && !edgeAnchor
+    ? `translate3d(-50%, 0, 0) ${baseScale}`
+    : baseScale;
+  const overlayOpacity = phase === "shrinking" ? 0 : 1;
+  // Bloom origin. Edge cards in a row grow inward — no leftward bleed past
+  // the row's left chevron / viewport edge for the leading card, no rightward
+  // bleed past the right edge for the trailing card.
+  const overlayOrigin =
+    edgeAnchor === "left"
+      ? "left center"
+      : edgeAnchor === "right"
+        ? "right center"
+        : "center center";
 
   return (
     <Box
@@ -129,137 +201,271 @@ export function Tile({
         flexShrink: 0,
         position: "relative",
         cursor: onClick ? "pointer" : "default",
-        // The card itself is positioned absolutely on top so its expansion
-        // + scale doesn't shift sibling tiles or push the next row down.
       }}
     >
+      {/* Resting card. Always rendered; never scales. */}
       <Box
         sx={{
-          // The card fills its slot at rest. When it scales on hover/focus,
-          // the transform expands it from center — neighbors stay put.
           position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: expanded ? 30 : 1,
-          transform: expanded ? "scale(1.32)" : "scale(1)",
-          // center-center so the card grows in all four directions on hover,
-          // not just downward.
-          transformOrigin: "center center",
-          transition: `transform ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}, box-shadow ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
-          willChange: "transform",
-          display: "flex",
-          flexDirection: "column",
+          inset: 0,
+          zIndex: 1,
           borderRadius: `${tokens.radius.sm}px`,
-          // The ring wraps the whole card (image + grey panel) — not the
-          // image alone — per the design brief.
-          boxShadow: showRing
-            ? `0 0 0 2px rgba(245,245,245,0.95), 0 0 0 8px rgba(245,245,245,0.12), 0 22px 48px rgba(0,0,0,0.6)`
-            : expanded
-              ? `0 22px 48px rgba(0,0,0,0.6)`
-              : "none",
-          overflow: "visible",
+          overflow: "hidden",
         }}
       >
+        <CardImageArea
+          aspect={restAspect}
+          artwork={artwork}
+          artworkUrl={artworkUrl}
+          hasImage={hasImage}
+          color={color}
+          title={title}
+          badge={badge}
+          showMute={false}
+        />
+      </Box>
+
+      {/* Hover partial. Mounts when expanded, scales/opacity per `phase`. */}
+      {overlayMounted && (
         <Box
           sx={{
-            position: "relative",
-            width: "100%",
-            aspectRatio: liveAspect,
+            position: "absolute",
+            top: 0,
+            zIndex: 30,
+            opacity: overlayOpacity,
+            transform: overlayTransform,
+            transformOrigin: overlayOrigin,
+            transition: overlayTransition,
+            willChange: "transform, opacity",
+            display: "flex",
+            flexDirection: "column",
             borderRadius: `${tokens.radius.sm}px`,
-            // Bottom corners square up when the grey panel is showing, so the
-            // image + panel read as one continuous card.
-            borderBottomLeftRadius: expanded ? 0 : `${tokens.radius.sm}px`,
-            borderBottomRightRadius: expanded ? 0 : `${tokens.radius.sm}px`,
-            background: hasImage
-              ? `${color ?? tokens.color.surfaceLow} center/cover no-repeat url("${liveArtworkUrl}")`
-              : color ?? `linear-gradient(155deg, ${tokens.color.surfaceMid}, ${tokens.color.surfaceLow})`,
-            overflow: "hidden",
-            flexShrink: 0,
-            transition: `aspect-ratio ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
+            boxShadow: showRing
+              ? `0 0 0 2px rgba(245,245,245,0.95), 0 0 0 8px rgba(245,245,245,0.12), 0 22px 48px rgba(0,0,0,0.6)`
+              : `0 22px 48px rgba(0,0,0,0.6)`,
+            overflow: "visible",
+            // Landscape expansion (Top 10): break out of the portrait poster's
+            // width. The overlay is sized to ~180% of the poster wrapper's
+            // width — the poster occupies ~55.6% of its slot (slot is 6:5,
+            // poster inside is 2:3 at full slot height), so 180% of poster
+            // width ≈ the full slot width, which equals the boxart card
+            // width in adjacent rows. Image area inside fills this width at
+            // 16:9, yielding a partial that matches the landscape card
+            // partials used by Row.tsx.
+            ...(isLandscapeExpansion
+              ? {
+                  width: "180%",
+                  ...(edgeAnchor === "left"
+                    ? { left: 0 }
+                    : edgeAnchor === "right"
+                      ? { right: 0 }
+                      : { left: "50%" }),
+                }
+              : { left: 0, right: 0 }),
           }}
         >
-          {artwork}
-
-          {!hasImage && title && (
-            <>
+          <Box
+            sx={{
+              position: "relative",
+              width: "100%",
+              aspectRatio: isLandscapeExpansion ? "16 / 9" : overlayAspect,
+              borderTopLeftRadius: `${tokens.radius.sm}px`,
+              borderTopRightRadius: `${tokens.radius.sm}px`,
+              background: hasImage
+                ? `${color ?? tokens.color.surfaceLow} center/cover no-repeat url("${overlayArtworkUrl}")`
+                : color ?? `linear-gradient(155deg, ${tokens.color.surfaceMid}, ${tokens.color.surfaceLow})`,
+              overflow: "hidden",
+              flexShrink: 0,
+            }}
+          >
+            {hasImage && (
               <Box
                 sx={{
                   position: "absolute",
-                  inset: 0,
-                  background: "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 100%)",
-                  pointerEvents: "none",
-                }}
-              />
-              <Typography
-                sx={{
-                  position: "absolute",
-                  left: tokens.space.sm,
+                  top: tokens.space.sm,
                   right: tokens.space.sm,
-                  bottom: badge ? tokens.space.xl : tokens.space.sm,
-                  fontSize: tokens.type.scale.h4.size,
-                  fontWeight: tokens.type.weight.bold,
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  border: `1px solid rgba(245,245,245,0.7)`,
+                  display: "grid",
+                  placeItems: "center",
                   color: tokens.color.textPrimary,
-                  lineHeight: 1.05,
-                  letterSpacing: "-0.005em",
-                  textShadow: "0 2px 12px rgba(0,0,0,0.5)",
-                  overflow: "hidden",
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
+                  filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.6))",
                 }}
               >
-                {title}
-              </Typography>
-            </>
-          )}
+                <VolumeOffIcon sx={{ fontSize: 14 }} />
+              </Box>
+            )}
 
-          {/* Mute affordance — only when expanded (hover/focus). */}
-          {expanded && hasImage && (
-            <Box
-              sx={{
-                position: "absolute",
-                top: tokens.space.sm,
-                right: tokens.space.sm,
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                border: `1px solid rgba(245,245,245,0.7)`,
-                display: "grid",
-                placeItems: "center",
-                color: tokens.color.textPrimary,
-                filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.6))",
-              }}
-            >
-              <VolumeOffIcon sx={{ fontSize: 14 }} />
-            </Box>
-          )}
+            {!hasImage && title && (
+              <>
+                <Box
+                  sx={{
+                    position: "absolute",
+                    inset: 0,
+                    background:
+                      "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 100%)",
+                    pointerEvents: "none",
+                  }}
+                />
+                <Typography
+                  sx={{
+                    position: "absolute",
+                    left: tokens.space.sm,
+                    right: tokens.space.sm,
+                    bottom: badge ? tokens.space.xl : tokens.space.sm,
+                    fontSize: tokens.type.scale.h4.size,
+                    fontWeight: tokens.type.weight.bold,
+                    color: tokens.color.textPrimary,
+                    lineHeight: 1.05,
+                    letterSpacing: "-0.005em",
+                    textShadow: "0 2px 12px rgba(0,0,0,0.5)",
+                    overflow: "hidden",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                  }}
+                >
+                  {title}
+                </Typography>
+              </>
+            )}
 
-          {/* Bottom-center badge pair. Small red + white pills, no gap. */}
-          {badge && (badge.red || badge.white) && (
-            <Box
-              sx={{
-                position: "absolute",
-                left: "50%",
-                bottom: 6,
-                transform: "translateX(-50%)",
-                display: "flex",
-                alignItems: "stretch",
-                pointerEvents: "none",
-              }}
-            >
-              {badge.red && <BadgePill text={badge.red} variant="red" />}
-              {badge.white && <BadgePill text={badge.white} variant="white" />}
-            </Box>
-          )}
+            {badge && (badge.red || badge.white) && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  left: "50%",
+                  bottom: 0,
+                  transform: "translateX(-50%)",
+                  display: "flex",
+                  alignItems: "stretch",
+                  pointerEvents: "none",
+                }}
+              >
+                {badge.red && <BadgePill text={badge.red} variant="red" />}
+                {badge.white && <BadgePill text={badge.white} variant="white" />}
+              </Box>
+            )}
+          </Box>
+
+          {expansion && <TileInfoPanel expansion={expansion} />}
         </Box>
+      )}
+    </Box>
+  );
+}
 
-        {/* Grey info panel — only visible when expanded. Sits below the image
-            as part of the card. Image stays full bleed. */}
-        {expanded && expansion && (
-          <TileInfoPanel expansion={expansion} />
-        )}
-      </Box>
+/**
+ * The resting card's image surface. Reused as the partial's image surface
+ * too, except the partial overrides the aspect/artwork choice for the
+ * expanded view.
+ */
+function CardImageArea({
+  aspect,
+  artwork,
+  artworkUrl,
+  hasImage,
+  color,
+  title,
+  badge,
+  showMute,
+}: {
+  aspect: string;
+  artwork?: ReactNode;
+  artworkUrl?: string;
+  hasImage: boolean;
+  color?: string;
+  title?: string;
+  badge?: TileBadge;
+  showMute: boolean;
+}) {
+  return (
+    <Box
+      sx={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: aspect,
+        borderRadius: `${tokens.radius.sm}px`,
+        background: hasImage
+          ? `${color ?? tokens.color.surfaceLow} center/cover no-repeat url("${artworkUrl}")`
+          : color ?? `linear-gradient(155deg, ${tokens.color.surfaceMid}, ${tokens.color.surfaceLow})`,
+        overflow: "hidden",
+        flexShrink: 0,
+      }}
+    >
+      {artwork}
+
+      {!hasImage && title && (
+        <>
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 100%)",
+              pointerEvents: "none",
+            }}
+          />
+          <Typography
+            sx={{
+              position: "absolute",
+              left: tokens.space.sm,
+              right: tokens.space.sm,
+              bottom: badge ? tokens.space.xl : tokens.space.sm,
+              fontSize: tokens.type.scale.h4.size,
+              fontWeight: tokens.type.weight.bold,
+              color: tokens.color.textPrimary,
+              lineHeight: 1.05,
+              letterSpacing: "-0.005em",
+              textShadow: "0 2px 12px rgba(0,0,0,0.5)",
+              overflow: "hidden",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+            }}
+          >
+            {title}
+          </Typography>
+        </>
+      )}
+
+      {showMute && hasImage && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: tokens.space.sm,
+            right: tokens.space.sm,
+            width: 28,
+            height: 28,
+            borderRadius: "50%",
+            border: `1px solid rgba(245,245,245,0.7)`,
+            display: "grid",
+            placeItems: "center",
+            color: tokens.color.textPrimary,
+            filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.6))",
+          }}
+        >
+          <VolumeOffIcon sx={{ fontSize: 14 }} />
+        </Box>
+      )}
+
+      {badge && (badge.red || badge.white) && (
+        <Box
+          sx={{
+            position: "absolute",
+            left: "50%",
+            bottom: 6,
+            transform: "translateX(-50%)",
+            display: "flex",
+            alignItems: "stretch",
+            pointerEvents: "none",
+          }}
+        >
+          {badge.red && <BadgePill text={badge.red} variant="red" />}
+          {badge.white && <BadgePill text={badge.white} variant="white" />}
+        </Box>
+      )}
     </Box>
   );
 }
@@ -305,11 +511,6 @@ function TileInfoPanel({ expansion }: { expansion: TileExpansion }) {
         display: "flex",
         flexDirection: "column",
         gap: `${tokens.space.xs}px`,
-        animation: `tile-panel-in ${tokens.motion.duration.entrance}ms ${tokens.motion.easing.entrance}`,
-        "@keyframes tile-panel-in": {
-          from: { opacity: 0 },
-          to: { opacity: 1 },
-        },
       }}
     >
       <Box sx={{ display: "flex", alignItems: "center", gap: `${tokens.space.xs}px` }}>
