@@ -2,7 +2,42 @@ import { Box, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { tokens } from "@/theme/tokens";
-import { experiments, getExperiment } from "./registry";
+import { experiments, getExperiment, type ValidationState } from "./registry";
+
+const VALIDATION_LABEL: Record<ValidationState, string> = {
+  draft: "Draft",
+  validated: "Validated",
+  deprecated: "Deprecated",
+};
+
+const VALIDATION_COLOR: Record<ValidationState, { fg: string; bg: string }> = {
+  draft: { fg: "#FFD479", bg: "rgba(255, 212, 121, 0.12)" },
+  validated: { fg: "#7BD389", bg: "rgba(123, 211, 137, 0.12)" },
+  deprecated: { fg: "#A0A0A0", bg: "rgba(160, 160, 160, 0.12)" },
+};
+
+function ValidationChip({ state }: { state: ValidationState }) {
+  const color = VALIDATION_COLOR[state];
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: "inline-block",
+        paddingInline: `${tokens.space.sm}px`,
+        paddingBlock: "2px",
+        fontSize: tokens.type.scale.micro.size,
+        letterSpacing: tokens.type.scale.micro.letterSpacing,
+        textTransform: "uppercase",
+        fontWeight: tokens.type.weight.semibold,
+        color: color.fg,
+        backgroundColor: color.bg,
+        borderRadius: `${tokens.radius.sm}px`,
+      }}
+    >
+      {VALIDATION_LABEL[state]}
+    </Box>
+  );
+}
 
 /**
  * Experiments surface.
@@ -34,8 +69,11 @@ export function ExperimentsIndex() {
         <Typography sx={{ fontSize: tokens.type.scale.h1.size, lineHeight: 1.06, letterSpacing: tokens.type.scale.h1.letterSpacing, fontWeight: tokens.type.weight.bold, mt: `${tokens.space.sm}px`, mb: `${tokens.space.md}px` }}>
           Side-by-side variants
         </Typography>
-        <Typography sx={{ fontSize: tokens.type.scale.bodySmall.size, color: tokens.color.textSecondary, maxWidth: 720, mb: `${tokens.space["2xl"]}px`, lineHeight: 1.4 }}>
+        <Typography sx={{ fontSize: tokens.type.scale.bodySmall.size, color: tokens.color.textSecondary, maxWidth: 720, mb: `${tokens.space.lg}px`, lineHeight: 1.4 }}>
           Each experiment is a self-contained variant of a prototype. Render one full-screen, or compare two — the main prototype is registered as <code style={{ color: tokens.color.textPrimary }}>channels-main</code> so you can always diff a variant against the canonical version.
+        </Typography>
+        <Typography sx={{ fontSize: tokens.type.scale.micro.size, color: tokens.color.textTertiary, maxWidth: 720, mb: `${tokens.space["2xl"]}px`, lineHeight: 1.5, letterSpacing: tokens.type.scale.micro.letterSpacing }}>
+          Each card carries a validation state — <Box component="span" sx={{ color: VALIDATION_COLOR.draft.fg }}>Draft</Box> means it exists but hasn't been evaluated yet, <Box component="span" sx={{ color: VALIDATION_COLOR.validated.fg }}>Validated</Box> means it's been compared and is worth referencing. Borrowed from the Hawkins team's stated regret about shipping components before product-context validation — see <code style={{ color: tokens.color.textPrimary }}>context/hawkins/notes/operations-and-contribution-model.md</code>.
         </Typography>
 
         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: `${tokens.space.lg}px` }}>
@@ -51,13 +89,16 @@ export function ExperimentsIndex() {
                 "&:hover": { borderColor: tokens.color.borderStrong },
               }}
             >
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", mb: `${tokens.space.sm}px` }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", mb: `${tokens.space.sm}px`, gap: `${tokens.space.sm}px` }}>
                 <Typography sx={{ fontSize: tokens.type.scale.h4.size, fontWeight: tokens.type.weight.semibold, color: tokens.color.textPrimary }}>
                   {exp.name}
                 </Typography>
-                <Typography sx={{ fontSize: tokens.type.scale.micro.size, color: tokens.color.textTertiary, letterSpacing: tokens.type.scale.micro.letterSpacing, textTransform: "uppercase", fontWeight: tokens.type.weight.semibold }}>
-                  {exp.tag}
-                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: `${tokens.space.sm}px`, flexShrink: 0 }}>
+                  <ValidationChip state={exp.validation} />
+                  <Typography sx={{ fontSize: tokens.type.scale.micro.size, color: tokens.color.textTertiary, letterSpacing: tokens.type.scale.micro.letterSpacing, textTransform: "uppercase", fontWeight: tokens.type.weight.semibold }}>
+                    {exp.tag}
+                  </Typography>
+                </Box>
               </Box>
               <Typography sx={{ fontSize: tokens.type.scale.bodySmall.size, color: tokens.color.textSecondary, mb: `${tokens.space.md}px`, lineHeight: 1.4 }}>
                 {exp.description}

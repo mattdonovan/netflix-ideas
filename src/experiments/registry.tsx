@@ -10,7 +10,16 @@ import { Channels } from "@/prototypes/channels/Channels";
  *
  * Add new experiments by appending to the array. Keep the id stable —
  * comparison URLs reference it (?compare=channels-main,channels-prompt-top).
+ *
+ * Validation state is a borrowed pattern from the Hawkins team's stated
+ * regret about shipping components broadly before stress-testing them in
+ * real product context. See context/hawkins/sources/blog-netflix-techblog-godi-2021.md
+ * and context/hawkins/notes/operations-and-contribution-model.md ("Outliers").
+ * Treat "draft" as Outliers-equivalent: it exists, it can be opened, but it
+ * has not yet earned a recommendation against the canonical baseline.
  */
+
+export type ValidationState = "draft" | "validated" | "deprecated";
 
 export type Experiment = {
   id: string;
@@ -21,6 +30,13 @@ export type Experiment = {
    * can group related work.
    */
   tag: string;
+  /**
+   * Lifecycle marker:
+   *  - "draft"      — exists in the registry; not yet evaluated against the baseline
+   *  - "validated"  — has been compared and is worth referencing
+   *  - "deprecated" — superseded; kept for historical comparison
+   */
+  validation: ValidationState;
   render: () => ReactNode;
 };
 
@@ -30,6 +46,7 @@ export const experiments: Experiment[] = [
     name: "Channels — canonical",
     description: "The current main prototype. Use as the baseline for any side-by-side comparison.",
     tag: "baseline",
+    validation: "validated",
     render: () => <Channels />,
   },
   // Variants are added here as they're created. Seeded with one placeholder so the
@@ -39,6 +56,7 @@ export const experiments: Experiment[] = [
     name: "Channels — prompt at top",
     description: "Variant where the prompt panel slides down from the top of the screen instead of overlaying center. Tests whether top-anchored prompts feel less interruptive on a focused row.",
     tag: "layout",
+    validation: "draft",
     render: () => <Channels />, // Placeholder — swap with VariantTopPrompt component when authored.
   },
 ];
