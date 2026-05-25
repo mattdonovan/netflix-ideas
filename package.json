@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "snap": "node scripts/snap.mjs",
-    "review:check": "node scripts/check-lens-promotion.mjs"
+    "review:check": "node scripts/check-lens-promotion.mjs",
+    "build-idea": "node scripts/build-idea.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
