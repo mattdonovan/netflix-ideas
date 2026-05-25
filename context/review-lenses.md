@@ -169,6 +169,35 @@ Each guest lens is here to find a specific failure mode. Pick the one whose fail
 
 ---
 
+## Carryover and graduation
+
+Lenses repeat themselves when they're treated as personas summoned cold each pass. Frank "discovers" flux every week; Mateo "notices" AI-as-theater every week. The fix is to make every lens carry its own history and earn its place by saying something new — or get out of the way.
+
+### Before publishing a review, every anchor lens must do ONE of three things
+
+- **Carry** — "Last pass I flagged X. The work moved here. I now hold Y." A new posture, anchored in what changed. This is the default for a healthy lens on an active prototype.
+- **Sit out** — "Last pass I flagged X. The work addressed it. I have nothing new this pass." Explicit silence is a valid pass. Padding with a recycled critique is not.
+- **Graduate** — "Last pass I flagged X. I have now flagged X two or more passes without resolution. Promoting X to `context/project-rules.md` as a constraint." The lens stops re-raising it; the work checks itself against the rule.
+
+A pass that fires all five anchor lenses with the same critiques as last pass is a failed pass. The convergence is an echo, not signal.
+
+### Dedup before opening issues
+
+Before opening a new GitHub issue from a critique, search open issues for the same finding. If it exists, comment on the existing issue and link the new review. Do not duplicate. (See issue #34, "carried from prior review" — that was a comment, not a new issue.)
+
+### Graduation target: `context/project-rules.md`
+
+When a lens graduates a critique, it moves to `context/project-rules.md`. Format per rule:
+
+- **Rule:** one sentence the work must obey
+- **Promoted from:** which lens, which pass, link
+- **Why it's a rule, not a lens finding:** what made it graduate (usually: flagged N passes with no movement; it's a constraint, not a fresh perception)
+- **How to check:** what does compliance look like at code-review time
+
+When you ship a change, scan `project-rules.md` once. The lenses won't re-raise these — you have to.
+
+---
+
 ## How to run a review pass
 
 When Matt says "review the Channels prototype" or "review pass on what I just pushed":
@@ -202,22 +231,31 @@ Pass: first | iteration | final
 ## What's being reviewed
 <one paragraph: the surface, the changes since last pass, the surface area covered>
 
+## Carryover from prior review
+<link to prior review file. For each anchor lens, one line: did it carry, sit out, or graduate? If graduated, link the new entry in `context/project-rules.md`.>
+
 ## The Couch Test
 - Focus visible <1s: pass | fail (why)
 - Primary text readable without leaning: pass | fail (why)
 - Outer 5% clear: pass | fail (why)
 
 ## Anchor lens findings
+<For each lens: lead with "Carry: ...", "Sit out: ..." (one sentence why), or "Graduate: ..." (link the rule). If carrying, then "Opportunity: ...".>
 ### Frank Chimero
-- Opportunity: ...
+- Carry / Sit out / Graduate: ...
+- Opportunity (if carrying): ...
 ### Josh Mateo
-- Opportunity: ...
+- Carry / Sit out / Graduate: ...
+- Opportunity (if carrying): ...
 ### Niyati Gupta
-- Opportunity: ...
+- Carry / Sit out / Graduate: ...
+- Opportunity (if carrying): ...
 ### Diana Lu
-- Opportunity: ...
+- Carry / Sit out / Graduate: ...
+- Opportunity (if carrying): ...
 ### Matt D. Smith
-- Opportunity: ...
+- Carry / Sit out / Graduate: ...
+- Opportunity (if carrying): ...
 ### Stakeholder — Discovery PM
 - Challenge: ...
 ### Stakeholder — TV Engineering Lead
@@ -244,3 +282,30 @@ Pass: first | iteration | final
 ```
 
 This keeps reviews discoverable from the GitHub repo for the writeup, and it forces the review to compose with the codebase rather than living as an external doc. The companion GitHub issue makes the headline scannable and provides a comment thread for follow-up critique.
+
+---
+
+## Promoting a lens to a skill
+
+The lens system lives in this one document on purpose — it's easier to iterate on the discipline when the whole cast is co-located, and convergence has more force when the lenses share a page. Splitting into per-lens skill files (`.claude/skills/<lens>.md` with frontmatter and conditional triggers) is the right *next* container, but only once a lens has a track record worth carrying independently.
+
+### When to consider promotion
+
+Run `npm run review:check` after each pass. It scans `reviews/*.md` and reports per-lens signals. Promote a lens to a skill when **2 or more** of the following trip:
+
+- **Track record depth** — lens has appeared in 4+ review passes with distinct Carry/Sit-out/Graduate entries. There's a real history worth versioning independently.
+- **Sit-out streak** — lens has sat out 3 consecutive passes. The work doesn't always need it, so conditional triggering (auto-load only when relevant) starts paying off.
+- **Prototype-specific posture** — lens holds a different stance on Channels vs Invite that's load-bearing. A skill with `applies-to: [channels]` is cleaner than nesting prototype branches inside one document.
+- **Versioned drift** — lens has been explicitly re-versioned (Frank-v2, Mateo-v2) because its prior posture was retired. The diff between versions is large enough that they want to be separate files.
+- **Section weight** — lens section in `review-lenses.md` exceeds ~80 lines, or the whole file crosses ~400 lines and a single lens is the biggest contributor.
+
+The script counts the first two and reports file/section sizes. The last three are judgement and you make the call.
+
+### How to promote
+
+1. Create `.claude/skills/<lens-slug>.md` with frontmatter (`name`, `description`, `triggers`, `applies-to`, `version`).
+2. Move the lens body from `review-lenses.md` into the skill file. Add a `## History` section that captures the lens's carry/graduate timeline pulled from prior reviews.
+3. Replace the lens's section in `review-lenses.md` with a one-line pointer: `**<Lens name>** — see `.claude/skills/<lens-slug>.md`.`
+4. Update the review template's "Anchor lens findings" section to keep the lens name and the Carry/Sit-out/Graduate line; the skill carries the rest.
+
+When 3+ lenses promote in the same pass, also convert `review-lenses.md` into an orchestration document: it lists the skills, defines the convergence/divergence/calibration discipline, and stops trying to hold every lens body itself.
