@@ -39,5 +39,12 @@ lerna-debug.log*
 # OS
 Thumbs.db
 
+# downloaded research media — link/embed instead, never commit
+*.mp4
+*.webm
+*.mkv
+*.mov
+*.m4v
+
 # Claude Code local config
 .claude/
