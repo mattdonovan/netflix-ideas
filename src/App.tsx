@@ -8,6 +8,7 @@ import { hawkinsTheme } from "@/theme/hawkins";
 import { tokens } from "@/theme/tokens";
 import { Channels, ChannelBarsIcon } from "@/prototypes/channels/Channels";
 import { IdeaHopperModal } from "@/prototypes/idea-hopper/IdeaHopperModal";
+import { registeredPrototypes } from "@/prototypes/registry";
 import { ExperimentsIndex, ExperimentSingle, ExperimentCompare } from "@/experiments/Experiments";
 import mattAvatarLargeUrl from "@/assets/matt-avatar-large.jpg";
 import hopperUrl from "@/assets/hopper.png";
@@ -25,6 +26,9 @@ export default function App() {
           <Route path="/channels" element={<Channels />} />
           <Route path="/experiments" element={<ExperimentsRouter />} />
           <Route path="/experiments/:id" element={<SingleExperimentRoute />} />
+          {registeredPrototypes.map((p) => (
+            <Route key={p.slug} path={`/${p.slug}`} element={<p.Component />} />
+          ))}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
@@ -116,6 +120,9 @@ function Home() {
           <ChannelsTile />
           <IdeaHopperTile onOpen={() => setIdeaHopperOpen(true)} />
           <MattTile />
+          {registeredPrototypes.map((p) => (
+            <RegistryTile key={p.slug} slug={p.slug} label={p.label} glyph={p.glyph} />
+          ))}
         </Box>
 
         <ViewGithubButton />
@@ -240,6 +247,46 @@ function ChannelsTile() {
       </Box>
     </Tooltip>
   );
+}
+
+/**
+ * Tile for prototypes registered via `npm run build-idea`. One uniform shape
+ * so generated prototypes read as a tier below the hand-coded Channels /
+ * Idea Hopper / Matt tiles. Glyph is rendered centered against a tinted
+ * surface — color hashed from the slug so each generated tile is visually
+ * distinct without anyone choosing the color.
+ */
+function RegistryTile({ slug, label, glyph }: { slug: string; label: string; glyph: string }) {
+  const hue = hashHue(slug);
+  return (
+    <Tooltip title={`Open ${label}`} placement="bottom" arrow>
+      <Box sx={{ display: "inline-block" }}>
+        <TileShell label={label} asLink={`/${slug}`}>
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              background: `radial-gradient(ellipse 70% 70% at 50% 55%, hsl(${hue}, 35%, 18%) 0%, #0A0A0C 80%)`,
+              display: "grid",
+              placeItems: "center",
+              color: "#fff",
+              fontSize: 56,
+              fontWeight: tokens.type.weight.regular,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {glyph}
+          </Box>
+        </TileShell>
+      </Box>
+    </Tooltip>
+  );
+}
+
+function hashHue(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h % 360;
 }
 
 function IdeaHopperTile({ onOpen }: { onOpen: () => void }) {
