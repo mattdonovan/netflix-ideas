@@ -4,10 +4,12 @@
 export type CatalogEntry = {
   title: string;
   year?: number;
-  kind: "movie" | "tv" | null;
+  kind: "movie" | "tv" | "game" | null;
   tmdbId: number | null;
+  rawgId?: number | null;
   posterUrl: string | null;
   backdropUrl: string | null;
+  logoUrl?: string | null;
 };
 
 export const catalog: CatalogEntry[] = [
@@ -16,1064 +18,1790 @@ export const catalog: CatalogEntry[] = [
     "year": 2003,
     "kind": "movie",
     "tmdbId": 153,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/3jCLmYDIIiSMPujbwygNpqdpM8N.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/6ITVHoipvxAS8luzKtHTbPaHLtT.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/6ITVHoipvxAS8luzKtHTbPaHLtT.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/pMVDJOPEEhQ0ATtmuk48xEdmyMT.png"
   },
   {
     "title": "Call Me by Your Name",
     "year": 2017,
     "kind": "movie",
     "tmdbId": 398818,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/mZ4gBdfkhP9tvLH1DO4m4HYtiyi.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/fwf4L3r2ZU9ptOB9nOo5nuVLo1i.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/4Xh2a1WeTp6b8Ksvug0pAMbX3dT.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/7trVPcYwQU63pctlSPqR7amlcs0.png"
   },
   {
     "title": "The Florida Project",
     "year": 2017,
     "kind": "movie",
     "tmdbId": 394117,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/5QnDxdJg1fi6uMSkSi4x8tHsltm.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/lO5c0zG8s1dBPHcRparpNlNGWU9.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/GOwNU7Z9G3ORjNxdZnURfuIGS6.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/l73Gj7n6VgGRQ1fUzb5w07xj6fu.png"
   },
   {
     "title": "Moonlight",
     "year": 2016,
     "kind": "movie",
     "tmdbId": 376867,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/qLnfEmPrDjJfPyyddLJPkXmshkp.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/jm1oD3eB08LImSwL1LrzF9AJQ5b.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/jm1oD3eB08LImSwL1LrzF9AJQ5b.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/vLuFhqsCzqzcVvuPbk6KBZVrRj4.png"
   },
   {
     "title": "Past Lives",
     "year": 2023,
     "kind": "movie",
     "tmdbId": 666277,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/k3waqVXSnvCZWfJYNtdamTgTtTA.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/7HR38hMBl23lf38MAN63y4pKsHz.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/7HR38hMBl23lf38MAN63y4pKsHz.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/jzdqCuDygikoTJfYdRRTJp0xYsd.png"
   },
   {
     "title": "Aftersun",
     "year": 2022,
     "kind": "movie",
     "tmdbId": 965150,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/evKz85EKouVbIr51zy5fOtpNRPg.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/4jdduww9j5RyzO4ITRcuBFhqNN1.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/4jdduww9j5RyzO4ITRcuBFhqNN1.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/hZCqSZbRUSUyWIXglKtwuoM0AiV.png"
   },
   {
     "title": "Stranger Things",
     "year": 2016,
     "kind": "tv",
     "tmdbId": 66732,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/uOOtwVbSr4QDjAGIifLDwpb2Pdl.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/56v2KjBlU4XaOv9rVYEQypROD7P.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/56v2KjBlU4XaOv9rVYEQypROD7P.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/uyVM5qGksUzCgwo6UU0UrHex8Oj.png"
   },
   {
     "title": "The Wonder Years",
     "year": 2021,
     "kind": "tv",
     "tmdbId": 126164,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/stTtZ97QiXTvCQFDF6rNfFfFt9K.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/495i0mBxW11e3QVVAVQLt525Sru.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/495i0mBxW11e3QVVAVQLt525Sru.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/xwMkkRvi2DDP566MkFJBNKqM7Z8.png"
   },
   {
     "title": "Yellowjackets",
     "year": 2021,
     "kind": "tv",
     "tmdbId": 117488,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/xRnGrn7Z7SC0KIBodocoU1QgDZF.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ibFWJDWS8cTO6s2vZVd2uKDm8p.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ibFWJDWS8cTO6s2vZVd2uKDm8p.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/rNTY34G4jfaT7YUiSRFw8vtSOjG.png"
   },
   {
     "title": "Pen15",
     "year": 2019,
     "kind": "tv",
     "tmdbId": 85702,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/9rbyzSTXnrPHJZ1YEOQDK8gnNm8.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ymatnu4tnvlYvtqtHFqh4llpmRN.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ymatnu4tnvlYvtqtHFqh4llpmRN.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/3kJUgMH6awVKetlhb8wjkoOSqcC.png"
   },
   {
     "title": "Master of None",
     "year": 2015,
     "kind": "tv",
     "tmdbId": 64254,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/AcJM86PhgHAfbrF4dMKBaqO3cHV.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/yYnxld9hgTLCOFORequmOK6paj2.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/yYnxld9hgTLCOFORequmOK6paj2.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/kdA5pSvrpfBxOfIlUI9J4GTBUH3.svg"
   },
   {
     "title": "Reservation Dogs",
     "year": 2021,
     "kind": "tv",
     "tmdbId": 95215,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/t6hqwD5oQRGgNrZKN71BQYxteC1.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/4vC3CijGu8g2Z1UobwkJpRQHOVO.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/4vC3CijGu8g2Z1UobwkJpRQHOVO.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/bGX3Prq2lFrgQHCEKYRzriLoW6l.png"
   },
   {
     "title": "The Shape of Water",
     "year": 2017,
     "kind": "movie",
     "tmdbId": 399055,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/9zfwPffUXpBrEP26yp0q1ckXDcj.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/abirSHwWgKajV3hXhaIR5lcCIXe.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/abirSHwWgKajV3hXhaIR5lcCIXe.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/o0UhzgjUf5FTN0MUyMX4fOI9una.png"
   },
   {
     "title": "Annihilation",
     "year": 2018,
     "kind": "movie",
     "tmdbId": 300668,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/4YRplSk6BhH6PRuE9gfyw9byUJ6.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/9trZvBr44UGedUOiGo3jgSUw13e.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/9trZvBr44UGedUOiGo3jgSUw13e.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/in3fkx8QNOvCAGWtaOpd72Xj313.png"
   },
   {
     "title": "Pan's Labyrinth",
     "year": 2006,
     "kind": "movie",
     "tmdbId": 1417,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/z7xXihu5wHuSMWymq5VAulPVuvg.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/6G6nqSW9S7EHA9HrYl0Z8uo2H7f.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/6G6nqSW9S7EHA9HrYl0Z8uo2H7f.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/uWwaa2Dm9RHYyKNCdDgcblxzzHF.png"
   },
   {
     "title": "Under the Skin",
     "year": 2013,
     "kind": "movie",
     "tmdbId": 97370,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/55wmcXJIDYITr7JDijJTdvwSaAv.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/eS5OdKN3kRZXQbWRSSCJ4Gh0z26.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/eS5OdKN3kRZXQbWRSSCJ4Gh0z26.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/gZa1cYPhGAnRkN49ogN1ezxH6IK.png"
   },
   {
     "title": "Nope",
     "year": 2022,
     "kind": "movie",
     "tmdbId": 762504,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/AcKVlWaNVVVFQwro3nLXqPljcYA.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/yRutvYkM3OP8N9oqqfjSK1VC7fs.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/yRutvYkM3OP8N9oqqfjSK1VC7fs.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/gHw2KDeedrlAGsLXAr2kL3I4cIK.png"
   },
   {
     "title": "Color Out of Space",
     "year": 2019,
     "kind": "movie",
     "tmdbId": 548473,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/k7rD7LzlsPS4jmE6Siah0QO4tAc.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/vj2gCvD5vZDJ865izTU0J0wJBVc.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/vj2gCvD5vZDJ865izTU0J0wJBVc.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/nvOJYlTKJaLsCoto3F10I6Q1cNT.png"
   },
   {
     "title": "There Will Be Blood",
     "year": 2007,
     "kind": "movie",
     "tmdbId": 7345,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/fa0RDkAlCec0STeMNAhPaF89q6U.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/9UAKA6ceZi6TgQwTAAMt7DWwYPI.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/9UAKA6ceZi6TgQwTAAMt7DWwYPI.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/xszCigmmsXtZx15tNCsjN9hZNHc.png"
   },
   {
     "title": "The Master",
     "year": 2012,
     "kind": "movie",
     "tmdbId": 68722,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/rUSjbyvYWN9H4az8xt0tDtU7I6v.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/6vvt0ghvrrzEB8Z1BLvmHOWUdxw.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/6vvt0ghvrrzEB8Z1BLvmHOWUdxw.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/tEhM7HjXVPNyTgWAVLw2pE5kDNx.png"
   },
   {
     "title": "Phantom Thread",
     "year": 2017,
     "kind": "movie",
     "tmdbId": 400617,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/hgoWjp9Sh0MI97eAMZCnIoVfgvq.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/sJZd1H4cl2Nxhj0nutVCK5pMczL.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/sJZd1H4cl2Nxhj0nutVCK5pMczL.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/vppHPF10CObjbRDuXf2XcEtEKYE.png"
   },
   {
     "title": "Drive My Car",
     "year": 2021,
     "kind": "movie",
     "tmdbId": 758866,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/a2lxHS6Au35k5XtFQEQW44yWHeH.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/r6aqhlmJmu8Dv5E7QYEruaEXKYm.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/r6aqhlmJmu8Dv5E7QYEruaEXKYm.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/w2BpigtOFD3Vy3oVGc6ZufFMWiR.png"
   },
   {
     "title": "The Power of the Dog",
     "year": 2021,
     "kind": "movie",
     "tmdbId": 600583,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/kEy48iCzGnp0ao1cZbNeWR6yIhC.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/gAsHuCQMN7mv4uFIvM4ACQ09hPr.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/gAsHuCQMN7mv4uFIvM4ACQ09hPr.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/l4SoGq4WvirOb7DnfFvbwmZedbv.png"
   },
   {
     "title": "Tár",
     "year": 2022,
     "kind": "movie",
     "tmdbId": 817758,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/dRVAlaU0vbG6hMf2K45NSiIyoUe.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/84XcRwKHAw4VXdKOYTSW5ARxFEt.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/84XcRwKHAw4VXdKOYTSW5ARxFEt.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/aaj8A3TKGw5TaUufrh1U6xtgGaA.png"
   },
   {
     "title": "The Banshees of Inisherin",
     "year": 2022,
     "kind": "movie",
     "tmdbId": 674324,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/4yFG6cSPaCaPhyJ1vtGOtMD1lgh.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/1vXD5HXqkhvsXFHE7KmCPZGPR1e.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/1vXD5HXqkhvsXFHE7KmCPZGPR1e.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/oXu9YGlAMyIgJSifbPjaLOV8L2X.png"
   },
   {
     "title": "The Zone of Interest",
     "year": 2023,
     "kind": "movie",
     "tmdbId": 467244,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/hUu9zyZmDd8VZegKi1iK1Vk0RYS.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/pnTSOKcYnvdpQNQElAtJM1rWOxH.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/pnTSOKcYnvdpQNQElAtJM1rWOxH.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/q9aMZQKEsU1VabNGyYfFoECP3lP.png"
   },
   {
     "title": "Heat",
     "year": 1995,
     "kind": "movie",
     "tmdbId": 949,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/e09dLw1Ljtccd2P4NsuUvVtS5du.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/xKsnZDERG1dk95wuZ5q9iks3OL3.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/xKsnZDERG1dk95wuZ5q9iks3OL3.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/wfd1ahFR6bbTE1M91h3o2gUsiYL.png"
   },
   {
     "title": "Drive",
     "year": 2011,
     "kind": "movie",
     "tmdbId": 64690,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/602vevIURmpDfzbnv5Ubi6wIkQm.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/iymDDg4upZWgpbSeiE1JCjsSPBs.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/iymDDg4upZWgpbSeiE1JCjsSPBs.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/3joUcZ9dgqpOlJXxxA0b2M9mkx5.png"
   },
   {
     "title": "Uncut Gems",
     "year": 2019,
     "kind": "movie",
     "tmdbId": 473033,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/6XN1vxHc7kUSqNWtaQKN45J5x2v.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/eGljNfNCrPhFYG2RXXmmE0OKu5.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/eGljNfNCrPhFYG2RXXmmE0OKu5.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/hiF1jRHALkH8WzynYVURoNXQX6T.png"
   },
   {
     "title": "Good Time",
     "year": 2017,
     "kind": "movie",
     "tmdbId": 429200,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/yE1c9hj5Hf8a9KplAdRdhADqUro.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/5AhkjcqqRxBdpYZ0TeOuTCuOUYq.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/5AhkjcqqRxBdpYZ0TeOuTCuOUYq.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/3STqJu7o7zM2Pgxh3MxpKI9pgAE.png"
   },
   {
     "title": "Sicario",
     "year": 2015,
     "kind": "movie",
     "tmdbId": 273481,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/lz8vNyXeidqqOdJW9ZjnDAMb5Vr.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/fKPgObonYgPgCdu88yjV7Hpn7Dp.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/fKPgObonYgPgCdu88yjV7Hpn7Dp.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/995VQDIxH5nKRLt5qXqmMdPj0kz.png"
   },
   {
     "title": "Killing Them Softly",
     "year": 2012,
     "kind": "movie",
     "tmdbId": 64689,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/heaz45kpFa4Oa7iLis0OBas68ls.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/4xGuNyCX46pwEpdQISRYiaBXEN7.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/4xGuNyCX46pwEpdQISRYiaBXEN7.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/hAX2ZiZ9qV8XJD74XBl1D0MDS9r.png"
   },
   {
     "title": "Widows",
     "year": 2018,
     "kind": "movie",
     "tmdbId": 401469,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/d31SGJSaX29ba5ZUbZcesGoDE7I.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/tkri1hMrb1FhWfb2bWpprsvq9Sd.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/tkri1hMrb1FhWfb2bWpprsvq9Sd.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/pUg7fljR1F2uwnaGfmLEznrrdUa.png"
   },
   {
     "title": "Arrival",
     "year": 2016,
     "kind": "movie",
     "tmdbId": 329865,
-    "posterUrl": "https://image.tmdb.org/t/p/w500/pEzNVQfdzYDzVK0XqxERIw2x2se.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/uKPbFF08QkRMvIAsgCh1soeyPhZ.jpg"
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/x2FJsf1ElAgr63Y3PNPtJrcmpoe.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/uKPbFF08QkRMvIAsgCh1soeyPhZ.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/rcPtxYkZ2mXmKdD0NKLzjsHxL3V.png"
   },
   {
     "title": "Ex Machina",
     "year": 2014,
     "kind": "movie",
     "tmdbId": 264660,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/dmJW8IAKHKxFNiUnoDR7JfsK7Rp.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/uqOuJ50EtTj7kkDIXP8LCg7G45D.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/uqOuJ50EtTj7kkDIXP8LCg7G45D.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/yqsWGuoqhSgLywml6j497fBORYl.png"
   },
   {
     "title": "Her",
     "year": 2013,
     "kind": "movie",
     "tmdbId": 152601,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/eCOtqtfvn7mxGl6nfmq4b1exJRc.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/nG5zmbVeYlcDhckrPAe06fArywn.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/sPPsR9f4K0movWVQ99u4uMqFzEL.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/vTEK9z9glcdLRJXnFcoaN1XcVIV.png"
   },
   {
     "title": "Blade Runner 2049",
     "year": 2017,
     "kind": "movie",
     "tmdbId": 335984,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/mVr0UiqyltcfqxbAUcLl9zWL8ah.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/mVr0UiqyltcfqxbAUcLl9zWL8ah.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/6C3wm76cwP1x3VlPKX4dVKDNUPb.png"
   },
   {
     "title": "Dune",
     "year": 2021,
     "kind": "movie",
     "tmdbId": 438631,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/gDzOcq0pfeCeqMBwKIJlSmQpjkZ.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/zRKQW58MBEY078AxkHxEJzUskCl.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/qVgZu5BTx6pu4owCvVOm4zjTfOi.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/woifx7xduIyJYq8ktCiN36zt9Xu.png"
   },
   {
     "title": "Dune: Part Two",
     "year": 2024,
     "kind": "movie",
     "tmdbId": 693134,
-    "posterUrl": "https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg"
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/heM4XKC0jA8fTSNe8F7oUkcJV7Z.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/eZ239CUp1d6OryZEBPnO2n87gMG.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/eYvF1LhPKuoBxOAmWjFTAK7EPWl.png"
   },
   {
     "title": "Interstellar",
     "year": 2014,
     "kind": "movie",
     "tmdbId": 157336,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/yQvGrMoipbRoddT0ZR8tPoR7NfX.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/2ssWTSVklAEc98frZUQhgtGHx7s.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/2ssWTSVklAEc98frZUQhgtGHx7s.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/zEewiIVx9rDfc1HahWPNk4uyJdP.png"
   },
   {
     "title": "Severance",
     "year": 2022,
     "kind": "tv",
     "tmdbId": 95396,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/pPHpeI2X1qEd1CS1SeyrdhZ4qnT.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ixgFmf1X59PUZam2qbAfskx2gQr.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ixgFmf1X59PUZam2qbAfskx2gQr.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/yyS1tALk7t3YdTNMOvR5gsnXINA.png"
   },
   {
     "title": "The Bear",
     "year": 2022,
     "kind": "movie",
     "tmdbId": 2383,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/ry4A1Y2udvqyDlVHLtSeP1u9qwJ.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/3wcDKBiMnCEZBIg5ADN1dZ7L44i.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/3wcDKBiMnCEZBIg5ADN1dZ7L44i.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/dEMEXDSKVdiLRmRuD6TnyBy91pF.png"
   },
   {
     "title": "Atlanta",
     "year": 2016,
     "kind": "tv",
     "tmdbId": 67178,
-    "posterUrl": "https://image.tmdb.org/t/p/w500/y6wYElX5HaPZItVGJcYGdQO7k8g.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/jBGjbSDRxOEudW9rmQbWDzJUKq9.jpg"
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/tM6xqRKXoloH9UchaJEyyRE9O1w.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/jBGjbSDRxOEudW9rmQbWDzJUKq9.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/9mc72Fo2nXSb4gP5ngrrVDHcuJH.png"
   },
   {
     "title": "Fleabag",
     "year": 2016,
     "kind": "tv",
     "tmdbId": 67070,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/27vEYsRKa3eAniwmoccOoluEXQ1.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/hXdQ4MWsEOX6qg6VydKrLb3YJ4g.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/hXdQ4MWsEOX6qg6VydKrLb3YJ4g.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/5Tq9X4JF4U5wM75TrewcEAnIz7q.png"
   },
   {
     "title": "Barry",
     "year": 2018,
     "kind": "movie",
     "tmdbId": 3175,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/A0byHUHMwZ7dtBQtfZ44QIgDbjo.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ef6SvWbSfCFlKodJZqpIaTvsRRP.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ef6SvWbSfCFlKodJZqpIaTvsRRP.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/3JCe5mAsPkj5l4UfPnXbhqdwrjF.png"
   },
   {
     "title": "Succession",
     "year": 2018,
     "kind": "tv",
     "tmdbId": 76331,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/z0XiwdrCQ9yVIr4O0pxzaAYRxdW.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/bcdUYUFk8GdpZJPiSAas9UeocLH.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/d87JXX3DLkRJMfm5StCmmnmhHuX.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/5MAURYSb9Q98fRWuSTOGFlztKIZ.png"
   },
   {
     "title": "I Think You Should Leave",
     "year": 2019,
     "kind": "tv",
     "tmdbId": 88728,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/26fMaTPRczCrTUOQ5svA1Db7l4h.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/3yA0Zw7jeftK4F51PbnZyJOoNs2.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/3yA0Zw7jeftK4F51PbnZyJOoNs2.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/odpGcpiljtupeK3y1DzPbAHBCcL.png"
   },
   {
     "title": "Spider-Man: Across the Spider-Verse",
     "year": 2023,
     "kind": "movie",
     "tmdbId": 569094,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/9xfDWXAUbFXQK585JvByT5pEAhe.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/9xfDWXAUbFXQK585JvByT5pEAhe.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/cmE0j3mQQe6xrzLryxGF9rF2KC8.png"
   },
   {
     "title": "The Mitchells vs. the Machines",
     "year": 2021,
     "kind": "movie",
     "tmdbId": 501929,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/mI2Di7HmskQQ34kz0iau6J1vr70.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/vsZLf5uog08pAnfsMuDWrsLWUUF.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/vsZLf5uog08pAnfsMuDWrsLWUUF.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/2dBK8tGVO7E3usWVbXNzJl3h7WB.png"
   },
   {
     "title": "Spirited Away",
     "year": 2001,
     "kind": "movie",
     "tmdbId": 129,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/dyJvKsNs2KP8qQnAXbRwDjblViy.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/dyJvKsNs2KP8qQnAXbRwDjblViy.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/hkUi1Z15Ymj9GNamWQkzUhehLuy.png"
   },
   {
     "title": "Princess Mononoke",
     "year": 1997,
     "kind": "movie",
     "tmdbId": 128,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/cMYCDADoLKLbB83g4WnJegaZimC.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/gl0jzn4BupSbL2qMVeqrjKkF9Js.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/gl0jzn4BupSbL2qMVeqrjKkF9Js.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/zmLS3kmBxLlVS1yxRY4x9WiLMrw.png"
   },
   {
     "title": "Pinocchio",
     "year": 2022,
     "kind": "movie",
     "tmdbId": 532639,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/zaZhjKrJeWczQ3AotKoQObppEbH.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/nnUQqlVZeEGuCRx8SaoCU4XVHJN.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/nnUQqlVZeEGuCRx8SaoCU4XVHJN.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/rijCe7A0zhb4J21SJDibYLz7oJA.png"
   },
   {
     "title": "The Act of Killing",
     "year": 2012,
     "kind": "movie",
     "tmdbId": 123678,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/sp5B7Tz5ttsgOLnIlCP5uEhtesI.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/1jLaJPdu7dMl0Nk3vLuafDx9PWS.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/1jLaJPdu7dMl0Nk3vLuafDx9PWS.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/1PR6BWmqXvDJgcNeiIMZhIj8wUk.png"
   },
   {
     "title": "Stories We Tell",
     "year": 2012,
     "kind": "movie",
     "tmdbId": 128216,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/aVDtDW3qP0je1Cy87GDfijG9W4c.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/fm0DYaSpo86VPxw2BU93w237WIl.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/fm0DYaSpo86VPxw2BU93w237WIl.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/hcQ7FK3rQM511DKXGS0NsODHDVV.png"
   },
   {
     "title": "Faces Places",
     "year": 2017,
     "kind": "movie",
     "tmdbId": 451995,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/1NX6NTj9FiiJwEgRUmEifSzE7Na.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/w4uYP6ebNaLQIjsHcjQhjz3BB2m.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/w4uYP6ebNaLQIjsHcjQhjz3BB2m.jpg",
+    "logoUrl": null
   },
   {
     "title": "Apollo 11",
     "year": 2019,
     "kind": "movie",
     "tmdbId": 549559,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/woLMRroHyoTGoXyxdEeBJEYBFtu.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/el4j0LHk56uH6ErE5FZu2x5UJx8.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/el4j0LHk56uH6ErE5FZu2x5UJx8.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/rRs8UeGNS4HwsuR99D7e0FEo9Kf.png"
   },
   {
     "title": "Free Solo",
     "year": 2018,
     "kind": "movie",
     "tmdbId": 515042,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/v4QfYZMACODlWul9doN9RxE99ag.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/z2uuQasY4gQJ8VDAFki746JWeQJ.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/z2uuQasY4gQJ8VDAFki746JWeQJ.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/9VtAEURjgcHsrcsZvKSOE0E2ZFb.png"
   },
   {
     "title": "Mad Max: Fury Road",
     "year": 2015,
     "kind": "movie",
     "tmdbId": 76341,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/hA2ple9q4qnwxp3hKVNhroipsir.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/uT895WNwm0aIJRtGizcQhrejWUo.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/uT895WNwm0aIJRtGizcQhrejWUo.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/cBAO0i9fZCux5SqJnizRECS8qfU.png"
   },
   {
     "title": "John Wick",
     "year": 2014,
     "kind": "movie",
     "tmdbId": 245891,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/wXqWR7dHncNRbxoEGybEy7QTe9h.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ff2ti5DkA9UYLzyqhQfI2kZqEuh.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ff2ti5DkA9UYLzyqhQfI2kZqEuh.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/eVXvH6j4qM8ZEqZfw5bZ6JGQxqZ.png"
   },
   {
     "title": "The Raid",
     "year": 2011,
     "kind": "movie",
     "tmdbId": 94329,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/Abnm1Ws3JH0ReCfEhLMPwPcMcGO.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/kFD6fVwnrHq085JIHCDXsSIqAZf.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/kFD6fVwnrHq085JIHCDXsSIqAZf.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/unKvJzCmfCPtX9dDQI5blsk1cCT.png"
   },
   {
     "title": "Mission: Impossible – Fallout",
     "year": 2018,
     "kind": "movie",
     "tmdbId": 353081,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/AkJQpZp9WoNdj7pLYSj1L0RcMMN.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/5jnoAA74Qwb5w6B9FMvnc20n6Ie.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/5jnoAA74Qwb5w6B9FMvnc20n6Ie.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/w8Rdtneqi5xi5xNA1mzr5iZbRWv.png"
   },
   {
     "title": "Hereditary",
     "year": 2018,
     "kind": "movie",
     "tmdbId": 493922,
-    "posterUrl": "https://image.tmdb.org/t/p/w500/hjlZSXM86wJrfCv5VKfR5DI2VeU.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/gJbTXKNTL6O7r7PzF6ZRkJGBlPp.jpg"
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/4GFPuL14eXi66V96xBWY73Y9PfR.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/gJbTXKNTL6O7r7PzF6ZRkJGBlPp.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/xhSvs5ZY2HSNb0v4zrKGwTyUfkv.png"
   },
   {
     "title": "Midsommar",
     "year": 2019,
     "kind": "movie",
     "tmdbId": 530385,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/7LEI8ulZzO5gy9Ww2NVCrKmHeDZ.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/pYgj8e2Y6RufnSyOA6OnzmxFXxZ.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/pYgj8e2Y6RufnSyOA6OnzmxFXxZ.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/vOvRZEAeAHOT2bzb6Z5jvVPmZSW.png"
   },
   {
     "title": "Get Out",
     "year": 2017,
     "kind": "movie",
     "tmdbId": 419430,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/mE24wUCfjK8AoBBjaMjho7Rczr7.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/o8dPH0ZSIyyViP6rjRX1djwCUwI.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/o8dPH0ZSIyyViP6rjRX1djwCUwI.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/dJ3LNGrU9Mav7xkpcQb8N53ggWY.png"
   },
   {
     "title": "The Witch",
     "year": 2015,
     "kind": "movie",
     "tmdbId": 310131,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/zap5hpFCWSvdWSuPGAQyjUv2wAC.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/zi2oYYNSSv7t44iSt5YrxHX9PYs.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/zi2oYYNSSv7t44iSt5YrxHX9PYs.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/fZaMSa3L82AiPHHhO11Sv6tgi4y.png"
   },
   {
     "title": "It Follows",
     "year": 2014,
     "kind": "movie",
     "tmdbId": 270303,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/iwnQ1JH1wdWrGYkgWySptJ5284A.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ikaRI4yMxKOje5SmOlAhOBUnicL.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ikaRI4yMxKOje5SmOlAhOBUnicL.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/qOeB1nW5z9JRbNUeY2kBSTs4Grq.png"
   },
   {
     "title": "Everything Everywhere All at Once",
     "year": 2022,
     "kind": "movie",
     "tmdbId": 545611,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/u68AjlvlutfEIcpmbYpKcdi09ut.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ss0Os3uWJfQAENILHZUdX8Tt1OC.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ss0Os3uWJfQAENILHZUdX8Tt1OC.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/6rpxXCCaVtj5u4dWANfdRoVgDQV.png"
   },
   {
     "title": "Minari",
     "year": 2020,
     "kind": "movie",
     "tmdbId": 615643,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/6mPNdmjdbVKPITv3LLCmQoKs9Zw.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/bKCpRjjTKcr3KAITmwjVMobbBYg.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/bKCpRjjTKcr3KAITmwjVMobbBYg.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/5MbXQ3y01GZhyYxmpBs2XNCarHG.png"
   },
   {
     "title": "Lady Bird",
     "year": 2017,
     "kind": "movie",
     "tmdbId": 391713,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/gl66K7zRdtNYGrxyS2YDUP5ASZd.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/jwBiY1kE5089i2WpfS1MHDYp3VO.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/jwBiY1kE5089i2WpfS1MHDYp3VO.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/zzh4g0v1fgy2wTs0XAkKQsAEPmQ.png"
   },
   {
     "title": "The Souvenir",
     "year": 2019,
     "kind": "movie",
     "tmdbId": 473019,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/2Nj04HsZ0lNkv07JnfBZ0bAIECn.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/kIu6aYaUxBUUfJ0l0sLNW1qh45u.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/kIu6aYaUxBUUfJ0l0sLNW1qh45u.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/ck32WCu5FdKBkmFIo3BEnBlRzUV.png"
   },
   {
     "title": "First Cow",
     "year": 2019,
     "kind": "movie",
     "tmdbId": 558582,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/yS41crZ1i0fFxCQbuL7I1Y1VBwm.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/8P3qur5Xh6dsH6xmZ1O2XS7vnc2.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/8P3qur5Xh6dsH6xmZ1O2XS7vnc2.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/7T7Mtd4OG5wc0r7QO4rEA92veP1.png"
   },
   {
     "title": "Paterson",
     "year": 2016,
     "kind": "movie",
     "tmdbId": 370755,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/AuJ1ZlfqwuAr9H5Qr1U9KILylse.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/5Bk7kYSKAuNrxI5BXpDqlsln2P0.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/5Bk7kYSKAuNrxI5BXpDqlsln2P0.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/3vjePJVLv8At5TcTfJlEcSbukZF.png"
   },
   {
     "title": "Columbus",
     "year": 2017,
     "kind": "movie",
     "tmdbId": 414453,
-    "posterUrl": "https://image.tmdb.org/t/p/w500/6tk0xmn9k5HjUeXsnhxIa94sFXP.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/xN88RKXxjPAcQsdBz6XavZ00PFh.jpg"
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/3ZE5Wl3CdfUH4BkWRmyMKPHkWHx.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/xN88RKXxjPAcQsdBz6XavZ00PFh.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/wNjlYlM4dH2oxA7iHYjALxaRo8y.png"
   },
   {
     "title": "Personal Shopper",
     "year": 2016,
     "kind": "movie",
     "tmdbId": 340676,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/cdm6qZgmbaIwjKBZnUSGWS4eyM2.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/2I4Pe9EN5NlVC90X1JDrbYObZY5.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/2I4Pe9EN5NlVC90X1JDrbYObZY5.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/aGzdL0rWAiS4fKAlOiEGgZbEmlL.png"
   },
   {
     "title": "Frances Ha",
     "year": 2012,
     "kind": "movie",
     "tmdbId": 121986,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/jrq1NoKvsxWCcffVOjegiYwloFN.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/oUVd42KgJWW6YnZLfzI7SDTdcPL.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/oUVd42KgJWW6YnZLfzI7SDTdcPL.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/d7O28FvoZZf79Fy9EDnUQHTKJV2.png"
   },
   {
     "title": "Wednesday",
     "year": 2022,
     "kind": "tv",
     "tmdbId": 119051,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/36xXlhEpQqVVPuiZhfoQuaY4OlA.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/iHSwvRVsRyxpX7FE7GbviaDvgGZ.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/iHSwvRVsRyxpX7FE7GbviaDvgGZ.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/m5nR52ErmLa0fkY4ItBuYaQuXJJ.png"
   },
   {
     "title": "Bridgerton",
     "year": 2020,
     "kind": "tv",
     "tmdbId": 91239,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/uXTg565ahu9RwonCX1V2Hex1NU6.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/6umsRLI7t0ydFwCl0JNEIO0q2LH.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/6umsRLI7t0ydFwCl0JNEIO0q2LH.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/bNWjCKZJTDKce8fuyRHSQ3B78ph.png"
   },
   {
     "title": "Squid Game",
     "year": 2021,
     "kind": "tv",
     "tmdbId": 93405,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/1QdXdRYfktUSONkl1oD5gc6Be0s.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/2meX1nMdScFOoV4370rqHWKmXhY.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/2meX1nMdScFOoV4370rqHWKmXhY.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/6YFWTX7fiGjWpsnJWLLV4RSbJWd.png"
   },
   {
     "title": "The Crown",
     "year": 2016,
     "kind": "movie",
     "tmdbId": 388191,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/8y3G8g7E7SXZ74XDt6gaxyfELse.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/uS9l3dVVJknIgJHFyW7jbTiaequ.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/uS9l3dVVJknIgJHFyW7jbTiaequ.jpg",
+    "logoUrl": null
   },
   {
     "title": "Black Mirror",
     "year": 2011,
     "kind": "tv",
     "tmdbId": 42009,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/seN6rRfN0I6n8iDXjlSMk1QjNcq.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/dg3OindVAGZBjlT3xYKqIAdukPL.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/dg3OindVAGZBjlT3xYKqIAdukPL.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/nDbdbw0KntwVV10C5hNDzy0VPXC.png"
   },
   {
     "title": "Money Heist",
     "year": 2017,
     "kind": "tv",
     "tmdbId": 71446,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/reEMJA1uzscCbkpeRJeTT2bjqUp.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/gFZriCkpJYsApPZEF3jhxL4yLzG.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/gFZriCkpJYsApPZEF3jhxL4yLzG.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/rYE1Jv1dzoCyjf0oES7L12gwH3D.png"
   },
   {
     "title": "Dark",
     "year": 2017,
     "kind": "movie",
     "tmdbId": 155,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/cfT29Im5VDvjE0RpyKOSdCKZal7.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/cfT29Im5VDvjE0RpyKOSdCKZal7.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/nO5Uix3Qr4WjOyU1BMPv0okyNWm.png"
   },
   {
     "title": "Ozark",
     "year": 2017,
     "kind": "tv",
     "tmdbId": 69740,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/pCGyPVrI9Fzw6rE1Pvi4BIXF6ET.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/aatG9iVAUL7U7OyFEmupESpOrD2.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/aatG9iVAUL7U7OyFEmupESpOrD2.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/ukFTvV5fFYsRZoX1W60cWj04snF.png"
   },
   {
     "title": "Mindhunter",
     "year": 2017,
     "kind": "tv",
     "tmdbId": 67744,
-    "posterUrl": "https://image.tmdb.org/t/p/w500/eg2eepJtJeRtCZEUJvIYyb2PnYD.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/lpDVJuIro21gtMj9iXMFKHuroZN.jpg"
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/fbKE87mojpIETWepSbD5Qt741fp.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/lpDVJuIro21gtMj9iXMFKHuroZN.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/bUeXqAHghLNOALd5PUiYdXr5PW.png"
   },
   {
     "title": "The Queen's Gambit",
     "year": 2020,
     "kind": "tv",
     "tmdbId": 87739,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/zU0htwkhNvBQdVSIKB9s6hgVeFK.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/34OGjFEbHj0E3lE2w0iTUVq0CBz.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/34OGjFEbHj0E3lE2w0iTUVq0CBz.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/aNOWJOfaLlSZlQ93mCz4bsrjHm2.png"
   },
   {
     "title": "Beef",
     "year": 2023,
     "kind": "tv",
     "tmdbId": 207468,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/bJxGs0w5RAhaX4fIUQu511rvm0S.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/htGeuCcNhlBe8GTx3izKOsd8frw.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/htGeuCcNhlBe8GTx3izKOsd8frw.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/wzQb17mLoXYU7uDZmIRgskTXzI3.png"
   },
   {
     "title": "Shōgun",
     "year": 2024,
     "kind": "movie",
     "tmdbId": 34546,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/jodipMyJcNwdSDfWJ6Chr2BG84k.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/mc7tt8Xenubu31lW6W1j54rfKgI.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/mc7tt8Xenubu31lW6W1j54rfKgI.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/yGf89nqN2fRslaiziaXalU22LHq.png"
   },
   {
     "title": "True Detective",
     "year": 2014,
     "kind": "tv",
     "tmdbId": 46648,
-    "posterUrl": "https://image.tmdb.org/t/p/w500/zYqVTiHK5ZajYcNzAW7qWte5NWS.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/v8YFr8BbU9qsO8PYIulzTeM6Qk.jpg"
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/dC7jkj2g1aU8sxKqM6D4g44xA6w.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/v8YFr8BbU9qsO8PYIulzTeM6Qk.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/6q4KzOcM2eEE1IbhFTadUsQkphl.png"
   },
   {
     "title": "Better Call Saul",
     "year": 2015,
     "kind": "tv",
     "tmdbId": 60059,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/zjg4jpK1Wp2kiRvtt5ND0kznako.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/og2jKploGHYnCz68vV1nRSEE0xV.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/og2jKploGHYnCz68vV1nRSEE0xV.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/hwxBWyoeTefjafeqkIONxl0mXUV.png"
   },
   {
     "title": "Breaking Bad",
     "year": 2008,
     "kind": "tv",
     "tmdbId": 1396,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/ztkUQFLlC19CCMYHW9o1zWhJRNq.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/chw44B2VnLha8iiTdyZcIW0ZELC.png"
   },
   {
     "title": "The Last of Us",
     "year": 2023,
     "kind": "movie",
     "tmdbId": 1100287,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/nter1KTaQjmkGCjvSu5u01FoecP.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/lpZRUK5AuFW4Rw6bISIWOBJhS7P.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/lpZRUK5AuFW4Rw6bISIWOBJhS7P.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/h3EtNe7ivDIolom2m4od0vIXPPK.png"
   },
   {
     "title": "House of Ninjas",
     "year": 2024,
     "kind": "tv",
     "tmdbId": 210098,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/AoEuSoSnwSSnX1YzykDdOiKAZNB.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/yeuK2pEl0rgUZ9Q7yttaRQMjjNc.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/yeuK2pEl0rgUZ9Q7yttaRQMjjNc.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/1cobmAAn1I4ne5rJ0qh0dsIRiTA.png"
   },
   {
     "title": "Ripley",
     "year": 2024,
     "kind": "movie",
     "tmdbId": 1319558,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/psJm3haNg6kBpGxfQ1rxckpfF74.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/mP5UGdueYU21rBetATHOnTOzm0M.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/mP5UGdueYU21rBetATHOnTOzm0M.jpg",
+    "logoUrl": null
   },
   {
     "title": "Baby Reindeer",
     "year": 2024,
     "kind": "tv",
     "tmdbId": 241259,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/tN9OcbkAOPwHSr1sgMornZtQZBx.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/2qLYxCyxf4fim0X5OqM5FjZqWXu.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/2qLYxCyxf4fim0X5OqM5FjZqWXu.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/timZdihwYx5hHJFJFBTWuViPmlT.png"
   },
   {
     "title": "The Diplomat",
     "year": 2023,
     "kind": "tv",
     "tmdbId": 203857,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/cOKXV0FalCYixNmZYCfHXgyQ0VX.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/v6f9FUDDQfGIv8MLRQwlL0zvRjI.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/v6f9FUDDQfGIv8MLRQwlL0zvRjI.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/mZTsqoUSWVnkm6rWRxmeifMzdkb.png"
   },
   {
     "title": "3 Body Problem",
     "year": 2024,
     "kind": "tv",
     "tmdbId": 108545,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/ykZ7hlShkdRQaL2aiieXdEMmrLb.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ciizJ9Okzt9tBBGK7Q3T14LFT2j.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ciizJ9Okzt9tBBGK7Q3T14LFT2j.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/T04v7jUheJeMcUbsbe087Swg1j.png"
   },
   {
     "title": "Avatar: The Last Airbender",
     "year": 2024,
     "kind": "tv",
     "tmdbId": 82452,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/lzZpWEaqzP0qVA5nkCc5ASbNcSy.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/imlTCObfzISogbvcwB1dokoXAIc.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/xUB3xFMgsHgPmdWnUWkHTJ03vHa.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/pzZ326i9mowUUjzL78mheWly5ka.png"
   },
   {
     "title": "One Piece",
     "year": 2023,
     "kind": "movie",
     "tmdbId": 900667,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/8ibfhe4P7rhmn3lrPhOZzIJHA2B.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/wghKvEjM7UzQzQcKnGbDjOyQO13.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/wghKvEjM7UzQzQcKnGbDjOyQO13.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/iHAkyfKf4dXTfA3n2aXxOzx12Sb.png"
   },
   {
     "title": "Heartstopper",
     "year": 2022,
     "kind": "tv",
     "tmdbId": 124834,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/wJJt1HG62h3WoGnLcRIbO2nNNkg.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/eGYnmsEs5cutoPQKf2QUlT4RgCH.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/eGYnmsEs5cutoPQKf2QUlT4RgCH.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/uLzUjJDkl1fA8MOpk5r87zdYsYK.png"
   },
   {
     "title": "Love Is Blind",
     "year": 2020,
     "kind": "tv",
     "tmdbId": 100757,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/ovDgO2LPfwdVRfvScAqo9aMiIW.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/vHuoq8HAmBFge8aiiyhHVVtmQr3.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/vHuoq8HAmBFge8aiiyhHVVtmQr3.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/eXc0K8WX9tkphUPcimP5fZrnKFm.png"
   },
   {
     "title": "Selling Sunset",
     "year": 2019,
     "kind": "tv",
     "tmdbId": 87826,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/wUtoD67q4BnRUwikUbT6M38d5oj.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/zzAPTDTHi7wrP99iD6x940wLjPy.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/zzAPTDTHi7wrP99iD6x940wLjPy.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/zSVUoPlO8FQOks8WrkF56xhNgTQ.png"
   },
   {
     "title": "Cobra Kai",
     "year": 2018,
     "kind": "tv",
     "tmdbId": 77169,
-    "posterUrl": "https://image.tmdb.org/t/p/w500/6POBWybSBDBKjSs1VAQcnQC1qyt.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/5NrSIzfcBOFI9HRGV4nRYgMGhDU.jpg"
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/6GDW4EsgsXlYrL1ASb5eCHQK4er.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/5NrSIzfcBOFI9HRGV4nRYgMGhDU.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/pkNOYbuOrm2CcyJcpqRLHN3ZW2m.png"
   },
   {
     "title": "Outer Banks",
     "year": 2020,
     "kind": "tv",
     "tmdbId": 100757,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/ovDgO2LPfwdVRfvScAqo9aMiIW.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/vHuoq8HAmBFge8aiiyhHVVtmQr3.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/vHuoq8HAmBFge8aiiyhHVVtmQr3.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/eXc0K8WX9tkphUPcimP5fZrnKFm.png"
   },
   {
     "title": "Emily in Paris",
     "year": 2020,
     "kind": "tv",
     "tmdbId": 82596,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/c0bkO416OU7YGdOFktk45H8REgL.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/jXTZaHarR9TZiMoQwiQWsGYXqnS.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/jXTZaHarR9TZiMoQwiQWsGYXqnS.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/jn93XAf60Ro2SLGKCdXXru1f45t.png"
   },
   {
     "title": "The Witcher",
     "year": 2019,
     "kind": "tv",
     "tmdbId": 71912,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/AoGsDM02UVt0npBA8OvpDcZbaMi.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/foGkPxpw9h8zln81j63mix5B7m8.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/foGkPxpw9h8zln81j63mix5B7m8.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/vqpt6XBp8VQu3Xy4YQsvZaTbxjl.png"
   },
   {
     "title": "Lupin",
     "year": 2021,
     "kind": "movie",
     "tmdbId": 614587,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/yEKzkOF0uImcs4CdhPQpF8TwVDE.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/3AQf7ne7L6FsXbphdNDIczC8Bfd.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/3AQf7ne7L6FsXbphdNDIczC8Bfd.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/pDRqpHz6IwCK81H24cpy1FMHsdk.png"
   },
   {
     "title": "Berlin",
     "year": 2023,
     "kind": "movie",
     "tmdbId": 384664,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/fMXPFsNFWgxi6NCmttI6GJq8pa8.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/kEHu88JMh9Zh4RYcgK7Lo2YZwdW.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/kEHu88JMh9Zh4RYcgK7Lo2YZwdW.jpg",
+    "logoUrl": null
   },
   {
     "title": "Squid Game: The Challenge",
     "year": 2023,
     "kind": "movie",
     "tmdbId": 1214667,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/78yTLvtsMntVN1cLfzBuZj870pe.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/i9bhxhUBFZHorvK81GNKMJGj2Kt.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/i9bhxhUBFZHorvK81GNKMJGj2Kt.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/qnPjU34CMFDBSgb49gLV6DFLjUe.png"
   },
   {
     "title": "Rebel Ridge",
     "year": 2024,
     "kind": "movie",
     "tmdbId": 646097,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/xEt2GSz9z5rSVpIHMiGdtf0czyf.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/cyKH7pDFlxIXluqRyNoHHEpxSDX.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/cyKH7pDFlxIXluqRyNoHHEpxSDX.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/hkaOa76w0S5zsgjPiomUWzwjyYC.png"
   },
   {
     "title": "Hit Man",
     "year": 2024,
     "kind": "movie",
     "tmdbId": 974635,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/oil3EZwKFp3CWxZnfGfGglesvm9.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/nv6F6tz7r61DUhE7zgHwLJFcTYp.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/nv6F6tz7r61DUhE7zgHwLJFcTYp.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/AfgFS0ULYK5wAKZKX8zatxlNB5X.png"
   },
   {
     "title": "The Killer",
     "year": 2023,
     "kind": "movie",
     "tmdbId": 800158,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/ipkcgvN7h3yZnbYowthloHLKsf4.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/f9Atch0jlzcOT9RbF8UccqfNOpd.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/f9Atch0jlzcOT9RbF8UccqfNOpd.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/4xaqtScTG7EWKkKjgELqOJjf6uS.png"
   },
   {
     "title": "Maestro",
     "year": 2023,
     "kind": "movie",
     "tmdbId": 523607,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/kxj7rMco6RNYsVcNwuGAIlfWu64.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/et0G74BxoBgNQEZBkUcVhsgeRFF.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/et0G74BxoBgNQEZBkUcVhsgeRFF.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/eCejKR20bOuMK56haWeCwTHDJ3L.png"
   },
   {
     "title": "Glass Onion",
     "year": 2022,
     "kind": "movie",
     "tmdbId": 661374,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/vDGr1YdrlfbU9wxTOdpf3zChmv9.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/dKqa850uvbNSCaQCV4Im1XlzEtQ.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/dKqa850uvbNSCaQCV4Im1XlzEtQ.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/8sAA3GbGFQqaJYyOCiJD9n0fVDI.png"
   },
   {
     "title": "All Quiet on the Western Front",
     "year": 2022,
     "kind": "movie",
     "tmdbId": 49046,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/2IRjbi9cADuDMKmHdLK7LaqQDKA.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/xBwtP27cx8WfjHJVFkpuV6F1RES.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/xBwtP27cx8WfjHJVFkpuV6F1RES.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/cydjZX9RKXj7Xi6pBGw7MmclZGU.png"
   },
   {
     "title": "Society of the Snow",
     "year": 2023,
     "kind": "movie",
     "tmdbId": 906126,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/2e853FDVSIso600RqAMunPxiZjq.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/md848EEPm3dHZOqwGxxTVwH2vu5.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/md848EEPm3dHZOqwGxxTVwH2vu5.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/3PVk5gmcRmJ3Jq1CxR1YeX07W4m.png"
   },
   {
     "title": "Carry-On",
     "year": 2024,
     "kind": "movie",
     "tmdbId": 1005331,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/sjMN7DRi4sGiledsmllEw5HJjPy.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/rhc8Mtuo3Kh8CndnlmTNMF8o9pU.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/rhc8Mtuo3Kh8CndnlmTNMF8o9pU.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/g4knIKemhYtoIhOQNkC2JEvJV0j.png"
   },
   {
     "title": "Damsel",
     "year": 2024,
     "kind": "movie",
     "tmdbId": 763215,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/AgHbB9DCE9aE57zkHjSmseszh6e.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/deLWkOLZmBNkm8p16igfapQyqeq.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/deLWkOLZmBNkm8p16igfapQyqeq.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/reAMGW5P64lzxxtMGwM9eh59Or0.png"
   },
   {
     "title": "Leave the World Behind",
     "year": 2023,
     "kind": "movie",
     "tmdbId": 726209,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/29rhl1xopxA7JlGVVsf1UHfYPvN.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/5cRw2QHQz5bp7W2KLdSpZoFoTTw.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/5cRw2QHQz5bp7W2KLdSpZoFoTTw.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/23cjn1nhHsVKyuTgVBc8LEBVJl9.png"
   },
   {
     "title": "Our Planet",
     "year": 2019,
     "kind": "movie",
     "tmdbId": 621561,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/rLQWByPlwOyLfQAoDA1t9pQaEKV.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/r6JDDWmVQaLy4OZBnJgH3yi4s8U.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/r6JDDWmVQaLy4OZBnJgH3yi4s8U.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/azU8dL2RbKaT0ob10qVBuyuahix.png"
   },
   {
     "title": "Wild Wild Country",
     "year": 2018,
     "kind": "movie",
     "tmdbId": 482981,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/79THplH9WM7y3gRPYM4dcC0IRPw.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/k18DGK5laMQJ8i79YnR509IzuKN.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/k18DGK5laMQJ8i79YnR509IzuKN.jpg",
+    "logoUrl": null
   },
   {
     "title": "Making a Murderer",
     "year": 2015,
     "kind": "tv",
     "tmdbId": 64439,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/sy2nV3rCcJQaRK5M0NWvvTU7CBx.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/i0bVPXHdvLQzE1Ld8dDwbCj1kOW.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/i0bVPXHdvLQzE1Ld8dDwbCj1kOW.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/9DQfraG1cZlHn1sQMPLHax1vA0b.png"
   },
   {
     "title": "Tiger King",
     "year": 2020,
     "kind": "movie",
     "tmdbId": 1591727,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/fQS0eMdYYJIoeEHZ8NezCw7Y6Ic.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/6e6hqL2NYOG9GKafVyLuaNDGYPs.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/6e6hqL2NYOG9GKafVyLuaNDGYPs.jpg",
+    "logoUrl": null
   },
   {
     "title": "The Social Dilemma",
     "year": 2020,
     "kind": "movie",
     "tmdbId": 656690,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/jcaM6V2tCtu6iMHDsGLBUbaYgYp.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/iYqoT9VBGdGTuLl3cjfbG7ZXDkP.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/iYqoT9VBGdGTuLl3cjfbG7ZXDkP.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/Kvvtp2tlr174pwpBT4p88zYba6.png"
   },
   {
     "title": "American Murder: The Family Next Door",
     "year": 2020,
     "kind": "movie",
     "tmdbId": 743601,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/jjs3hE3mQlVGTX3u5ZH2EJBJpf3.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/fi5TkN1mqC4HBaKCFX26NRQBYTC.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/fi5TkN1mqC4HBaKCFX26NRQBYTC.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/gZUNORuUmMdpK7pmj9jgkDE9MJS.png"
   },
   {
     "title": "13th",
     "year": 2016,
     "kind": "movie",
     "tmdbId": 4488,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/uGGpnWHOmWTARVN9wbC1nPxNgps.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/16zzKM5vDxnYiqG6Tg6wOkOLSmj.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/16zzKM5vDxnYiqG6Tg6wOkOLSmj.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/qpNcaeHxpvTJ8bQpjdQcvfEf6Ff.png"
   },
   {
     "title": "Don't F**k with Cats",
     "year": 2019,
     "kind": "tv",
     "tmdbId": 96129,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/Crc4XkhLddMTNJfj1iLca0w1Bb.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/5B5hpcQ4hc6ywi1MiauLhs4liem.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/5B5hpcQ4hc6ywi1MiauLhs4liem.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/vmAjDCfr2phBgkHZBqfx45lIDz1.png"
   },
   {
     "title": "Roma",
     "year": 2018,
     "kind": "movie",
     "tmdbId": 426426,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/dtIIyQyALk57ko5bjac7hi01YQ.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/zl9uqCl5iUSb50sTk2BPzw6bJnU.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/zl9uqCl5iUSb50sTk2BPzw6bJnU.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/8yNNzZwRvHrpznMmR5eUafoW5fb.png"
   },
   {
     "title": "The Irishman",
     "year": 2019,
     "kind": "movie",
     "tmdbId": 398978,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/mbm8k3GFhXS0ROd9AD1gqYbIFbM.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/1RDto0tLo8Fhq7OcwgDaM7nECb7.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/1RDto0tLo8Fhq7OcwgDaM7nECb7.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/dwGgp4AsCWtpc1f13ZVdVnxJ4pv.png"
   },
   {
     "title": "Marriage Story",
     "year": 2019,
     "kind": "movie",
     "tmdbId": 492188,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/2JRyCKaRKyJAVpsIHeLvPw5nHmw.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/wDwQXLDUuiEaaiuWIDBpbqnwYGX.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/wDwQXLDUuiEaaiuWIDBpbqnwYGX.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/9jqMHHph7PCca30w0SQtR3yReJZ.png"
   },
   {
     "title": "The Trial of the Chicago 7",
     "year": 2020,
     "kind": "movie",
     "tmdbId": 556984,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/ahf5cVdooMAlDRiJOZQNuLqa1Is.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/v8Nf6Y1qL1Q3PWTBezXNPPaXqza.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/v8Nf6Y1qL1Q3PWTBezXNPPaXqza.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/lzFCPx0hFDtGjbSxdkoW567sjdw.png"
   },
   {
     "title": "Mank",
     "year": 2020,
     "kind": "movie",
     "tmdbId": 614560,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/4yzTcAtvzyZLLto4z04xobUK9el.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/hBOH4PNnhcGPgZbZjBwkx9gnNxI.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/hBOH4PNnhcGPgZbZjBwkx9gnNxI.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/91m0t2LzrTvheshJMcz4G8aVWgZ.png"
   },
   {
     "title": "CODA",
     "year": 2021,
     "kind": "movie",
     "tmdbId": 776503,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/BzVjmm8l23rPsijLiNLUzuQtyd.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/v85FlkbMYKa5du1glm0YfYNsL2n.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/v85FlkbMYKa5du1glm0YfYNsL2n.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/gR2k7PWECbNvzRX7HMhj84TkWkf.png"
   },
   {
     "title": "Nomadland",
     "year": 2020,
     "kind": "movie",
     "tmdbId": 581734,
+    "rawgId": null,
     "posterUrl": "https://image.tmdb.org/t/p/w500/dKT8rGDR55cM1vGn7QZLA9Tg9YC.jpg",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/563sRDK3rZS31TXCdTY4lfcwrNK.jpg"
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/563sRDK3rZS31TXCdTY4lfcwrNK.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/5YvyvBLPjLQuvey1CNUWQF0iIhR.png"
+  },
+  {
+    "title": "Voicemails for Isabelle",
+    "year": 2026,
+    "kind": "movie",
+    "tmdbId": 614945,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/canZTWSxACSnAluir3dCtMxKpA1.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/2WU6Y6aonzD6uAaCmNnEFlesxxJ.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/AgKNByf6tc8e4dB6Sd9puLS2rAd.png"
+  },
+  {
+    "title": "Swapped",
+    "year": 2026,
+    "kind": "movie",
+    "tmdbId": 1007757,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/tHhxWxge06goXU6ZQH1hj7vK8Hd.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/zMwhWailP1WY7sb6AoE6b8ugoy.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/7fS6L7LRbiLZolZN8OShyJaI2mc.png"
+  },
+  {
+    "title": "Dhurandhar: The Revenge",
+    "year": 2026,
+    "kind": "movie",
+    "tmdbId": 1582770,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/ptTwQES14pr5c3aZvJg56YlYgb1.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/br4Ra4dRpvR0R7a1zPPkOwGkcky.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/lZ1nNJzVLQq9cuVezUG4IYKFxs2.png"
+  },
+  {
+    "title": "GOAT",
+    "year": 2026,
+    "kind": "movie",
+    "tmdbId": 1297842,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/wfuqMlaExcoYiUEvKfVpUTt1v4u.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/tq3h43fZy0H80vzf47MAY7R9Mxo.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/5mTk37Pa6LCMgCwDp2wl4AE3eA9.png"
+  },
+  {
+    "title": "Apex",
+    "year": 2026,
+    "kind": "movie",
+    "tmdbId": 1318447,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/eTp7gSPkSF3Aw79mNx1NkBP1PZT.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/9nzfyiYbmTUXWC4B2kwjl4NAlqO.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/1diKauHoRM74VNPLXFcGN1Bn1HS.png"
+  },
+  {
+    "title": "Office Romance",
+    "year": 2026,
+    "kind": "movie",
+    "tmdbId": 1358005,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/1HRUTqEVDmJC4L6tp6zd85MI6uH.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/1N5yz1IDw6Ci8le1YgeM6xtBijA.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/tyCkFuocklvcHUhJHpCb6b81zI1.png"
+  },
+  {
+    "title": "Dhurandhar",
+    "year": 2025,
+    "kind": "movie",
+    "tmdbId": 1291608,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/snBOuXDdhmTvlzMUvP9Em3Pp1u1.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/4DfxcN4w0FuYZHQ3JAHzpHWia1U.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/xAnUDVe23cQHKufi7XqzosRZFwp.png"
+  },
+  {
+    "title": "War Machine",
+    "year": 2026,
+    "kind": "movie",
+    "tmdbId": 1265609,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/rFhKkXhk7ClU03jQ5rHIApJDwev.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/6yeVcxFR0j08vlv2OlL6zbewm4D.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/blz9cHsWGjt4abdqKDdZLQEczN8.png"
+  },
+  {
+    "title": "My Dearest Assassin",
+    "year": 2026,
+    "kind": "movie",
+    "tmdbId": 1630423,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/ul4dQcA68mtSx8J56N5gEcaCCtP.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/xA6AM5MvEkieZKlv1Tn3sN23I7i.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/5RT3gWqna1GqmUHigoG3sjg7gwB.png"
+  },
+  {
+    "title": "Colors of Evil: Black",
+    "year": 2026,
+    "kind": "movie",
+    "tmdbId": 1560681,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/reeKdj7BSznr7wSGzAtIMrPFgKo.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/2D3W3Jp0VYsLhXTEfnvhbMvQEzk.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/uWobkfcpVx50AgVIUur7H92tUZC.png"
+  },
+  {
+    "title": "28 Years Later: The Bone Temple",
+    "year": 2026,
+    "kind": "movie",
+    "tmdbId": 1272837,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/kK1BGkG3KAvWB0WMV1DfOx9yTMZ.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/hHDNOlATHhre4eZ7aYz5cdyJLik.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/oB1yyH3NDiObkVhuFt9SuiIBP3q.png"
+  },
+  {
+    "title": "Remarkably Bright Creatures",
+    "year": 2026,
+    "kind": "movie",
+    "tmdbId": 1330021,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/9HcEqn3D4J6b2Z0jK54id9nA0fr.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/bVGHSe47W6oCQL1Q88pvRAet51A.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/9yhvM7mpxH8smgRAdLJwy4JE5R2.png"
+  },
+  {
+    "title": "Peaky Blinders: The Immortal Man",
+    "year": 2026,
+    "kind": "movie",
+    "tmdbId": 875828,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/gRMalasZEzsZi4w2VFuYusfSfqf.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/1fkuBPid72KGS6WmtkEXMftZtkE.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/9IpyBrvW5WqAUwiNIqFf7YbqLS4.png"
+  },
+  {
+    "title": "Anaconda",
+    "year": 2025,
+    "kind": "movie",
+    "tmdbId": 1234731,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/hBxN6dwrANN1ic3a4G9x6JZcR3C.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/swxhEJsAWms6X1fDZ4HdbvYBSf9.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/jVddo8wXiL1bXwRN62YSiFihUOw.png"
+  },
+  {
+    "title": "I Will Find You",
+    "year": 2026,
+    "kind": "tv",
+    "tmdbId": 278178,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/pb9oYHHNzauiCQZT03MpDAg46GI.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/z0R6ToCsMMkLwuQXjzzdd1QCdJv.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/jQXefsxsXxUi5MRYmj46pFskDld.png"
+  },
+  {
+    "title": "Teach You a Lesson",
+    "year": 2026,
+    "kind": "tv",
+    "tmdbId": 276161,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/fMECSPrTmRClSViMsXFYmiYIcWP.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/vyG93jhmPL7tBIhRtCLa5mdBKob.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/vWwzp7VAGikY94f9KlEQtNrcIzS.png"
+  },
+  {
+    "title": "BAKI-DOU: The Invincible Samurai",
+    "year": 2026,
+    "kind": "tv",
+    "tmdbId": 300054,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/frtzbwANetYd0M4zdrZ5gx0E89q.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/1M8uW8o6fdDaa3zqmBD2UUKu0VZ.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/4BnQ1NCfC9Ct2zMVgXBAhMkPTG8.png"
+  },
+  {
+    "title": "Berlin and the Lady with an Ermine",
+    "year": 2026,
+    "kind": "tv",
+    "tmdbId": 308014,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/sTumew0Q01ZHmFneA9cJRi3QUYC.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/nIFynZaeQnD3wVqBldVN6umgR5g.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/uBw5HWfUgMx9yKFuecVEqiEtxFK.png"
+  },
+  {
+    "title": "Pursuit of Jade",
+    "year": 2026,
+    "kind": "tv",
+    "tmdbId": 279388,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/tKMqVzKi4dVvm9Bdpb4oEEgnZYH.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/3FxO84UUfvVhvcuyHmBRixxcKcJ.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/9GmWih7czW3EMOXYabOutNO3NzJ.png"
+  },
+  {
+    "title": "My Royal Nemesis",
+    "year": 2026,
+    "kind": "tv",
+    "tmdbId": 303143,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/rYLQbyIvbEd0lF84iXrx7CbPcBB.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/p1ntnKJwn1URGv1xpU6NN33Y11O.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/eFgTiYX6lajcbgLy1FCqmj5unR5.png"
+  },
+  {
+    "title": "The WONDERfools",
+    "year": 2026,
+    "kind": "tv",
+    "tmdbId": 259837,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/jj7AYkz2OLRDL1wfJmjTXyWQ5I4.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/810mXC0xkxXVtoKIPGGVgO9PuLh.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/46I7PkWU0yy98CumLEN4JyA59Kd.png"
+  },
+  {
+    "title": "Finding Her Edge",
+    "year": 2026,
+    "kind": "tv",
+    "tmdbId": 281401,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/7t6iXlbfoBSfVyINLRHms5kqfze.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/3aeYYriPQN7886in9bIGKnbC5eQ.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/bkUYnM42KYFVuL7DWJRD0UqEpxR.png"
+  },
+  {
+    "title": "The Boroughs",
+    "year": 2026,
+    "kind": "tv",
+    "tmdbId": 224941,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/oKxBWbXmnWFO2Wh1QRTtshdfIRa.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/iftYIh1OjJb99EOTHIrDcx59zWb.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/tFNKk1t5sH27jAKh497pYh4hmzJ.png"
+  },
+  {
+    "title": "If Wishes Could Kill",
+    "year": 2026,
+    "kind": "tv",
+    "tmdbId": 285838,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/2CfTNVaR8kZQkWtWWE3Cntaiq33.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/zV9WYOfFr4MAnzXXD8PR5J6JnN3.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/21nrcCJkHtuPvDLkZDOg2mstBtS.png"
+  },
+  {
+    "title": "Nemesis",
+    "year": 2026,
+    "kind": "tv",
+    "tmdbId": 285807,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/NY7ZwSMw5PjoJdK2CObqiTj7Bm.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/pxnJeLSBdUikUOrWdNgrK1HQy2u.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/4S1aLdl1jyDsVRaevM6PqjWuIju.png"
+  },
+  {
+    "title": "Love in the Clouds",
+    "year": 2025,
+    "kind": "tv",
+    "tmdbId": 262928,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/1eOek63acPohNgvXog4uYnJT6fh.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/lAJCsUD3f6KhwdtbnevSAI1E9EU.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/vKxQSjofG2czRZ0VeG7CuCWsfvh.png"
+  },
+  {
+    "title": "Lord of the Flies",
+    "year": 2026,
+    "kind": "tv",
+    "tmdbId": 270572,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/zD50ejpus5rNidj6CBr4Ml59KOL.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/yRqFvu6rIytqZlzY0pBVvZG3W0S.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/m7e4KaIr40iNgLYP4pCuKPtSIhp.png"
+  },
+  {
+    "title": "Monster: The Ed Gein Story",
+    "year": 2025,
+    "kind": "tv",
+    "tmdbId": 286801,
+    "rawgId": null,
+    "posterUrl": "https://image.tmdb.org/t/p/w500/iDHzRALtZCzHVmx7uyjTTKvMAPB.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/cm2oUAPiTE1ERoYYOzzgloQw4YZ.jpg",
+    "logoUrl": "https://image.tmdb.org/t/p/w500/yzim5Aghuyv3VAeYxl7FDBvHQHM.png"
+  },
+  {
+    "title": "Grand Theft Auto: San Andreas",
+    "year": 2004,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 416,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/33ef701c8059391708f1c3ddbe9f1f81.png",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/33ef701c8059391708f1c3ddbe9f1f81.png",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/88a199611ac2b85bd3f76e8ee7e55650.png"
+  },
+  {
+    "title": "Grand Theft Auto: Vice City",
+    "year": 2002,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 430,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/75291728e2d8458a104b6abd0b062b70.jpg",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/75291728e2d8458a104b6abd0b062b70.jpg",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/a60c71bd110ebc4d6916e16b8ca24fda.png"
+  },
+  {
+    "title": "Grand Theft Auto III",
+    "year": 2001,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 432,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/00b76fddeaaa7d8c2c43d504b2babd8a.png",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/00b76fddeaaa7d8c2c43d504b2babd8a.png",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/8684ff2b6457df6145f160954e1ff7a7.png"
+  },
+  {
+    "title": "Hades",
+    "year": 2020,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 274755,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/56bbc93a8425b95e4ab7c789751475bf.png",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/56bbc93a8425b95e4ab7c789751475bf.png",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/923cac285a4b2e03d3d618857c250eee.png"
+  },
+  {
+    "title": "Dead Cells",
+    "year": 2018,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 11726,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/d0dde222e608c66b65d44776bd8b4092.jpg",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/d0dde222e608c66b65d44776bd8b4092.jpg",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/7fd3b80fb1884e2927df46a7139bb8bf.png"
+  },
+  {
+    "title": "Katana ZERO",
+    "year": 2019,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 13856,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/3124d54782a73b7c46fdbbb167b00f2c.png",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/3124d54782a73b7c46fdbbb167b00f2c.png",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/d98d76e2b5ba72023414d98e75403e79.png"
+  },
+  {
+    "title": "Monument Valley",
+    "year": 2014,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 591,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/b1038b75f57bff977ffd79a833811f36.png",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/b1038b75f57bff977ffd79a833811f36.png",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/539dd8f0bef239887a73fd3b475a07c0.png"
+  },
+  {
+    "title": "Monument Valley 2",
+    "year": 2017,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 23741,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/7990ec44fcf3d7a0e5a2add28362213c.jpg",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/7990ec44fcf3d7a0e5a2add28362213c.jpg",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/5443f02ef977dbca8a5cef27259c8f82.png"
+  },
+  {
+    "title": "Oxenfree",
+    "year": 2016,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 295,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/713586fe8b2dd639aac846e8ac1536a2.png",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/713586fe8b2dd639aac846e8ac1536a2.png",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/bdcb5c740603615e28537070b93f9c26.png"
+  },
+  {
+    "title": "Spiritfarer",
+    "year": 2020,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 326236,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/88759fc0e73600b1a941d8defae4d6b8.jpg",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/88759fc0e73600b1a941d8defae4d6b8.jpg",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/004bd77f07742ad928539b001cae96da.png"
+  },
+  {
+    "title": "Into the Breach",
+    "year": 2018,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 13566,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/4a11654ad1e1e48352252859ff3032a0.png",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/4a11654ad1e1e48352252859ff3032a0.png",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/8be143e16ed986b03216fd8d608c88fd.png"
+  },
+  {
+    "title": "Terra Nil",
+    "year": 2023,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 614952,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/c0eab7b86485ab4672f0c8b4d62af19e.jpg",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/c0eab7b86485ab4672f0c8b4d62af19e.jpg",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/3d88841ebcc0f7920755726b280302e7.png"
+  },
+  {
+    "title": "Cozy Grove",
+    "year": 2021,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 576532,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/02adbf83ef82e182414ca46fd1fe8b09.png",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/02adbf83ef82e182414ca46fd1fe8b09.png",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/9cd8ada4b4da6ef86c6f25a40b1daa62.png"
+  },
+  {
+    "title": "Vampire Survivors",
+    "year": 2022,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 685577,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/b026f93439176b320722ea7d2591a6f4.png",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/b026f93439176b320722ea7d2591a6f4.png",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/f0e6bc914c24c98b02e956b53344d081.png"
+  },
+  {
+    "title": "Braid",
+    "year": 2008,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 5161,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/6c97cd07663b099253bc569fe8d342bb.jpg",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/6c97cd07663b099253bc569fe8d342bb.jpg",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/ebd915aa666c3c541d16253342ab39c4.png"
+  },
+  {
+    "title": "The Case of the Golden Idol",
+    "year": 2022,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 806954,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/db4f7695d3dc40726311747633e3fca6.png",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/db4f7695d3dc40726311747633e3fca6.png",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/39f2ed9e766a027e0f357216a9f89764.png"
+  },
+  {
+    "title": "Storyteller",
+    "year": 2023,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 672323,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/7cb43cbcf50b923a4ab7886870027cc0.png",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/7cb43cbcf50b923a4ab7886870027cc0.png",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/6e776bda8a4dc8373337f9ef49686d0e.png"
+  },
+  {
+    "title": "Football Manager 2024",
+    "year": 2023,
+    "kind": "game",
+    "tmdbId": null,
+    "rawgId": 971687,
+    "posterUrl": "https://cdn2.steamgriddb.com/hero/c1e820388c82ae048336657d20831b79.png",
+    "backdropUrl": "https://cdn2.steamgriddb.com/hero/c1e820388c82ae048336657d20831b79.png",
+    "logoUrl": "https://cdn2.steamgriddb.com/logo/85eea89dea078f595e5d447befd013df.png"
   }
 ];
 
