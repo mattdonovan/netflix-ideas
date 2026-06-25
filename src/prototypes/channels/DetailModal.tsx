@@ -40,6 +40,9 @@ export type DetailModalContent = {
   kind: "movie" | "tv";
   backdropUrl?: string;
   posterUrl?: string;
+  /** Title-treatment logo (transparent PNG). Rendered in the hero in place of
+   *  the text title; falls back to text when absent. */
+  logoUrl?: string;
   match: number;
   rating: string;
   runtime: string;
@@ -178,19 +181,35 @@ function Hero({ content, onClose }: { content: DetailModalContent; onClose: () =
           gap: `${tokens.space.md}px`,
         }}
       >
-        <Typography
-          sx={{
-            fontSize: { xs: 36, sm: 48, md: 56 },
-            lineHeight: 0.95,
-            fontWeight: tokens.type.weight.bold,
-            color: tokens.color.textPrimary,
-            letterSpacing: "-0.01em",
-            textShadow: "0 4px 24px rgba(0,0,0,0.6)",
-            maxWidth: "75%",
-          }}
-        >
-          {content.title}
-        </Typography>
+        {content.logoUrl ? (
+          <Box
+            component="img"
+            src={content.logoUrl}
+            alt={content.title}
+            sx={{
+              alignSelf: "flex-start",
+              maxWidth: { xs: "70%", md: "55%" },
+              maxHeight: { xs: 110, sm: 140, md: 168 },
+              objectFit: "contain",
+              objectPosition: "left bottom",
+              filter: "drop-shadow(0 4px 24px rgba(0,0,0,0.6))",
+            }}
+          />
+        ) : (
+          <Typography
+            sx={{
+              fontSize: { xs: 36, sm: 48, md: 56 },
+              lineHeight: 0.95,
+              fontWeight: tokens.type.weight.bold,
+              color: tokens.color.textPrimary,
+              letterSpacing: "-0.01em",
+              textShadow: "0 4px 24px rgba(0,0,0,0.6)",
+              maxWidth: "75%",
+            }}
+          >
+            {content.title}
+          </Typography>
+        )}
 
         <Box sx={{ display: "flex", gap: `${tokens.space.xs}px`, flexWrap: "wrap" }}>
           <Button

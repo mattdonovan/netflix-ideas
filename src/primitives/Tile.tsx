@@ -70,6 +70,7 @@ export function Tile({
   artwork,
   artworkUrl,
   expandedArtworkUrl,
+  logoUrl,
   expandsToLandscape = false,
   badge,
   expansion,
@@ -86,6 +87,13 @@ export function Tile({
   artwork?: ReactNode;
   artworkUrl?: string;
   expandedArtworkUrl?: string;
+  /**
+   * Title-treatment logo (transparent PNG) overlaid on landscape artwork — the
+   * Netflix "titled card" look. Clean backdrops carry no text, so without this
+   * a boxart tile is unlabeled. Only honored for `aspect: "boxart"`; portrait
+   * posters already bake the title into the art.
+   */
+  logoUrl?: string;
   expandsToLandscape?: boolean;
   badge?: TileBadge;
   expansion?: TileExpansion;
@@ -152,6 +160,10 @@ export function Tile({
   }, [expanded]);
 
   const restAspect = aspect === "boxart" ? "16 / 9" : "2 / 3";
+  // Landscape (boxart) artwork carries no baked-in title, so overlay the logo
+  // (or a text fallback) on it. Portrait posters bake their own title — leave
+  // them be.
+  const titleArtOnImage = aspect === "boxart";
   const isLandscapeExpansion = !!expandsToLandscape;
   // The hover partial enters at its final landscape shape immediately (no
   // morph). Aspect-ratio doesn't animate — only opacity (snap on in, fade on
@@ -220,6 +232,8 @@ export function Tile({
           hasImage={hasImage}
           color={color}
           title={title}
+          logoUrl={logoUrl}
+          allowImageTitleArt={titleArtOnImage}
           badge={badge}
           showMute={false}
         />
@@ -298,38 +312,10 @@ export function Tile({
               </Box>
             )}
 
-            {!hasImage && title && (
-              <>
-                <Box
-                  sx={{
-                    position: "absolute",
-                    inset: 0,
-                    background:
-                      "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 100%)",
-                    pointerEvents: "none",
-                  }}
-                />
-                <Typography
-                  sx={{
-                    position: "absolute",
-                    left: tokens.space.sm,
-                    right: tokens.space.sm,
-                    bottom: badge ? tokens.space.xl : tokens.space.sm,
-                    fontSize: tokens.type.scale.h4.size,
-                    fontWeight: tokens.type.weight.bold,
-                    color: tokens.color.textPrimary,
-                    lineHeight: 1.05,
-                    letterSpacing: "-0.005em",
-                    textShadow: "0 2px 12px rgba(0,0,0,0.5)",
-                    overflow: "hidden",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                  }}
-                >
-                  {title}
-                </Typography>
-              </>
+            {hasImage && titleArtOnImage ? (
+              <TileTitleArt logoUrl={logoUrl} title={title} badge={badge} />
+            ) : (
+              !hasImage && title && <TileTitleArt title={title} badge={badge} />
             )}
 
             {badge && (badge.red || badge.white) && (
@@ -369,6 +355,8 @@ function CardImageArea({
   hasImage,
   color,
   title,
+  logoUrl,
+  allowImageTitleArt,
   badge,
   showMute,
 }: {
@@ -378,6 +366,8 @@ function CardImageArea({
   hasImage: boolean;
   color?: string;
   title?: string;
+  logoUrl?: string;
+  allowImageTitleArt?: boolean;
   badge?: TileBadge;
   showMute: boolean;
 }) {
@@ -397,37 +387,10 @@ function CardImageArea({
     >
       {artwork}
 
-      {!hasImage && title && (
-        <>
-          <Box
-            sx={{
-              position: "absolute",
-              inset: 0,
-              background: "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 100%)",
-              pointerEvents: "none",
-            }}
-          />
-          <Typography
-            sx={{
-              position: "absolute",
-              left: tokens.space.sm,
-              right: tokens.space.sm,
-              bottom: badge ? tokens.space.xl : tokens.space.sm,
-              fontSize: tokens.type.scale.h4.size,
-              fontWeight: tokens.type.weight.bold,
-              color: tokens.color.textPrimary,
-              lineHeight: 1.05,
-              letterSpacing: "-0.005em",
-              textShadow: "0 2px 12px rgba(0,0,0,0.5)",
-              overflow: "hidden",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-            }}
-          >
-            {title}
-          </Typography>
-        </>
+      {hasImage && allowImageTitleArt ? (
+        <TileTitleArt logoUrl={logoUrl} title={title} badge={badge} />
+      ) : (
+        !hasImage && title && <TileTitleArt title={title} badge={badge} />
       )}
 
       {showMute && hasImage && (
@@ -467,6 +430,77 @@ function CardImageArea({
         </Box>
       )}
     </Box>
+  );
+}
+
+/**
+ * Title overlay for landscape artwork: a bottom scrim plus either the
+ * title-treatment logo (preferred — matches the baked-in look of portrait
+ * posters) or, when no logo exists, a bold text title. Pinned bottom-left like
+ * the Netflix homepage. Lifts above the badge row when a badge is present.
+ */
+function TileTitleArt({
+  logoUrl,
+  title,
+  badge,
+}: {
+  logoUrl?: string;
+  title?: string;
+  badge?: TileBadge;
+}) {
+  if (!logoUrl && !title) return null;
+  const bottom = badge ? tokens.space.xl : tokens.space.sm;
+  return (
+    <>
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          background: "linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.6) 100%)",
+          pointerEvents: "none",
+        }}
+      />
+      {logoUrl ? (
+        <Box
+          component="img"
+          src={logoUrl}
+          alt={title ?? ""}
+          loading="lazy"
+          sx={{
+            position: "absolute",
+            left: tokens.space.sm,
+            bottom,
+            maxWidth: "58%",
+            maxHeight: "40%",
+            objectFit: "contain",
+            objectPosition: "left bottom",
+            filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.7))",
+            pointerEvents: "none",
+          }}
+        />
+      ) : (
+        <Typography
+          sx={{
+            position: "absolute",
+            left: tokens.space.sm,
+            right: tokens.space.sm,
+            bottom,
+            fontSize: tokens.type.scale.h4.size,
+            fontWeight: tokens.type.weight.bold,
+            color: tokens.color.textPrimary,
+            lineHeight: 1.05,
+            letterSpacing: "-0.005em",
+            textShadow: "0 2px 12px rgba(0,0,0,0.5)",
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+          }}
+        >
+          {title}
+        </Typography>
+      )}
+    </>
   );
 }
 

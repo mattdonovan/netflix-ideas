@@ -1172,19 +1172,23 @@ function ChannelRow({
       onTitleClick={onRequestSwitch}
       itemsPerView={{ xs: 2, sm: 3, md: 4, lg: 5, xl: 6 }}
     >
-      {tiles.map((ex, i) => (
-        <ChannelTile
-          key={ex.title + i}
-          index={i}
-          title={ex.title}
-          color={channel.tilePalette[i % channel.tilePalette.length]}
-          artworkUrl={findInCatalog(ex.title, ex.year)?.backdropUrl ?? undefined}
-          badge={badgeForChannel(channel.id, i, tiles.length)}
-          moodTags={channel.category.tone.slice(0, 3)}
-          aspect="boxart"
-          onSelect={() => selectTile(ex, i)}
-        />
-      ))}
+      {tiles.map((ex, i) => {
+        const catalogEntry = findInCatalog(ex.title, ex.year);
+        return (
+          <ChannelTile
+            key={ex.title + i}
+            index={i}
+            title={ex.title}
+            color={channel.tilePalette[i % channel.tilePalette.length]}
+            artworkUrl={catalogEntry?.backdropUrl ?? undefined}
+            logoUrl={catalogEntry?.logoUrl ?? undefined}
+            badge={badgeForChannel(channel.id, i, tiles.length)}
+            moodTags={channel.category.tone.slice(0, 3)}
+            aspect="boxart"
+            onSelect={() => selectTile(ex, i)}
+          />
+        );
+      })}
     </Row>
   );
 }
@@ -1711,6 +1715,7 @@ function ChannelTile({
   color,
   artworkUrl,
   expandedArtworkUrl,
+  logoUrl,
   expandsToLandscape,
   fillHeight,
   badge,
@@ -1723,6 +1728,7 @@ function ChannelTile({
   color: string;
   artworkUrl?: string;
   expandedArtworkUrl?: string;
+  logoUrl?: string;
   expandsToLandscape?: boolean;
   fillHeight?: boolean;
   badge?: TileBadge;
@@ -1753,10 +1759,11 @@ function ChannelTile({
       responsive
       fillHeight={fillHeight}
       aspect={aspect}
-      title={artworkUrl ? undefined : title}
+      title={title}
       color={artworkUrl ? undefined : `linear-gradient(155deg, ${color}, ${darken(color, 0.5)})`}
       artworkUrl={artworkUrl}
       expandedArtworkUrl={expandedArtworkUrl}
+      logoUrl={logoUrl}
       expandsToLandscape={expandsToLandscape}
       badge={badge}
       edgeAnchor={edgeAnchor}
@@ -1898,6 +1905,7 @@ function buildDetailContent({
     kind,
     backdropUrl: entry?.backdropUrl ?? undefined,
     posterUrl: entry?.posterUrl ?? undefined,
+    logoUrl: entry?.logoUrl ?? undefined,
     match,
     rating,
     runtime,
