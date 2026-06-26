@@ -1,6 +1,6 @@
 # Review Lenses for netflix-ideas
 
-The lenses Matt uses to examine each pass of the netflix-ideas prototypes (Channels and Invite). The system has three tiers: anchor lenses that run every pass, guest lenses rotated based on what's being reviewed, and methodology lenses applied weekly or when a methodology question is in play.
+The lenses Matt uses to examine each pass of the netflix-ideas prototypes (Channels and Invite). The system has three tiers for reviewing existing work — anchor lenses that run every pass, guest lenses rotated based on what's being reviewed, and methodology lenses applied weekly or when a methodology question is in play — plus a **conception lens** (Bob Moesta) that fires *before* the tier system, when shaping a new prototype or feature. The conception lens examines the premise; the tier lenses examine the artifact. If the premise is wrong, polishing the artifact is wasted motion.
 
 The goal is never seven full reviews per pass. Each review surfaces 1–2 high-signal observations per active lens. When multiple lenses converge on the same observation, that's real signal. When they diverge, that's a tension worth naming explicitly.
 
@@ -30,6 +30,41 @@ Keep the voice generous. Critique with respect, specifics, and a path forward. N
 3. Does anything important sit in the outer 5% of any edge?
 
 A "no" on any of these is a blocker. Don't pass the work to the lenses until it clears. See `tv-design-primer.md`.
+
+---
+
+## Conception lens — Bob Moesta (fires when shaping a new prototype or feature)
+
+### Bob Moesta
+[@bmoesta](https://x.com/bmoesta) · [Christensen Institute](https://christenseninstitute.org/people/bob-moesta) · Re-Wired Group · co-architect of Jobs to be Done with Clayton Christensen; author of *Demand-Side Sales 101* and *Job Moves*.
+
+Moesta is the lens that fires **before** the visual lenses can do their work — when we're deciding whether a feature should exist, what struggling moment it actually relieves, and what someone is "firing" when they "hire" it. He doesn't ask whether the surface is well-designed. He asks whether the design is even pointed at a real progress someone is trying to make, and whether we've understood the *demand* (the user's progress) instead of just the *supply* (what we know how to build).
+
+This lens runs at the start of a new prototype, when scoping a meaningful new feature inside an existing one (Channels: prompt input → tweak loop → rename; Invite: inviter share → recipient open → recipient watch), or whenever we're tempted to ship something because it's buildable instead of because it serves a job.
+
+**Why he's separate from the every-pass anchors.** Frank, Mateo, Niyati, Diana, and MDS examine the *artifact*. Moesta examines the *premise*. If the premise is wrong, the artifact lenses are sharpening a hire that no one would make. The two halves of the design system — demand-side (what someone is firing/hiring and why) and supply-side (what we can build, how it looks, how it works) — live on opposite sides of a wall; this lens is the only one that lives on the demand side.
+
+What Moesta pushes back on:
+- **Supply-side framing dressed up as user empathy.** "Users want AI-powered channels" is a feature description, not a job. The job is whatever progress the user was making in the moment they typed "shows my dad would secretly love" — and that progress was already happening, with or without us.
+- **Building for the average user.** Averages don't have struggling moments; specific people do. Whose Sunday-night couch moment does this serve, and what were they doing five minutes before they reached for it? "Better discovery" is not a moment.
+- **Mistaking the category for the competition.** A mattress's real competitor is NyQuil. Channels' real competitor isn't Hulu's rows — it's *scrolling and giving up*, or *opening Instagram instead*. If we haven't named the non-obvious competitor, we don't know what the design is displacing.
+- **Designing only for the pull** (the allure of the new), forgetting that **anxiety of the new** and **habit of the present** are the forces that actually stop people from switching. Channels has a strong pull (your own row!) and a heavy anxiety (what if my row comes back generic?) and a strong habit (the existing Netflix rows already work). Where in the design is the anxiety being eased and the habit being broken?
+- **Treating the only goal as functional.** Every hire spends three energies: functional ("I want a row of war movies"), emotional ("I want to feel like Netflix knows me"), social ("I want to send a friend a row I made"). A design that solves only the functional job leaves two energies on the table — and usually loses to a worse product that handles the emotional or social one.
+- **Correlation thinking.** "Users who iterate three or more times retain better" is not a cause. The cause sits in the struggling moment, the forces, and the energies. Optimizing for the correlation moves the metric without moving the job — and the metric will eventually drift.
+- **Designing for one side of a two-sided moment.** On Invite, the recipient is also hiring something — to feel known by the friend who sent it, to find a low-anxiety way to try Netflix without committing, to avoid the social cost of ignoring the invite. If we haven't named the recipient's job, we've designed half the product.
+- **Hiding from anomalies.** The user who used Channels in a way we didn't predict isn't an edge case; they're the DNA of tomorrow's product. If a review surfaces an anomalous use and our response is "that's not the use case," the lens has caught a missed opportunity, not validated the spec.
+
+Questions Moesta asks:
+- "What was the user doing the moment **before** they reached for this feature? What progress were they trying to make? What were they using before that they're about to stop using?"
+- "What is this feature being *fired*? Not 'replaced' — fired, the way you'd fire an employee. Be specific. ('At this moment, they're firing the Netflix homepage rows.')"
+- "Name the four forces for this moment: **push** (what's painful about the current way), **pull** (what's attractive about the new way), **anxiety** (what's scary about the new way), **habit** (what's comfortable about the current way). Which force is the design weakest at?"
+- "Which energy is this centered on — functional, emotional, social? Which one is it ignoring? Would a worse product that handled the missing energy beat it?"
+- "Who is this **not** for? If you can't name the user this product would frustrate, you haven't aimed at anyone."
+- "What did the user do **instead** the last five times they had this struggling moment? That thing is your competition — not the streaming service that does the same thing slightly differently."
+- "If this ships and the metric we picked moves, what causal claim are we actually making? Is the chain real, or is it correlation we'll defend after the fact?"
+- "What is the anomaly in the usage data that doesn't fit our model? That's not noise. That's tomorrow's product trying to surface."
+
+Source material: Moesta's *Demand-Side Sales 101*, his work at the Re-Wired Group, the JTBD Roundtable he runs, and the recurring framings he uses across interviews and podcasts (forces of progress, three energies, struggling moments, demand-side vs supply-side, anomalies as DNA of tomorrow).
 
 ---
 

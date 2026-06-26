@@ -4,7 +4,8 @@ import { Link as RouterLink } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import CheckIcon from "@mui/icons-material/Check";
 import ShuffleIcon from "@mui/icons-material/Shuffle";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import GitHubIcon from "@mui/icons-material/GitHub";
@@ -14,19 +15,19 @@ import InstagramIcon from "@mui/icons-material/Instagram";
 import TwitterIcon from "@mui/icons-material/Twitter";
 import YouTubeIcon from "@mui/icons-material/YouTube";
 import mattAvatarUrl from "@/assets/matt-avatar.png";
-import channelSurfingVideoUrl from "@/assets/channel-surfing.mp4";
-import thisIsTheEndUrl from "@/assets/this-is-the-end.jpg";
 import CloseIcon from "@mui/icons-material/Close";
 import { tokens } from "@/theme/tokens";
 import { TvFrame, Row, TopTenRow, Tile, NetflixWordmark } from "@/primitives";
+import { SamsungWordmark } from "@/primitives/SamsungWordmark";
+import { ControlWordmark, CONTROL_LOGO_DATA_URI } from "@/primitives/ControlWordmark";
 import { useRowSizing } from "@/primitives/Row";
 import type { TileBadge } from "@/primitives/Tile";
 import { FocusProvider } from "@/lib/focus";
 import { DetailModal, type DetailModalContent, type DetailModalSuggestion } from "./DetailModal";
-import { SwitchChannelsModal, type SwitchChannelOption } from "./SwitchChannelsModal";
+import { SwitchChannelsModal, type MediaKind } from "./SwitchChannelsModal";
 import { seedChannels, type Channel } from "./seedData";
 import { findInCatalog, catalog, type CatalogEntry } from "@/lib/catalog";
-import { summarizePromptToTitle } from "@/lib/claude";
+import { tuneChannel, type TuneCandidate } from "@/lib/claude";
 
 /**
  * Top-level Channels screen.
@@ -48,30 +49,24 @@ export function Channels() {
 }
 
 /**
- * Per-row override applied after a user picks a new channel from the
- * SwitchChannels modal.
+ * Per-row override applied after a user tunes a row from the AI prompt. While
+ * Claude selects a matching set of real catalog titles, the row's title cycles
+ * through "thinking" messages via a scramble animation. When Claude returns, the
+ * title scrambles to the real result and the row fills with the selected titles.
  *
- * Two sources, two timings:
- * - `curated` — picked from the modal's grid. Title is set instantly. The
- *   row sits in `loading` for ~3s, then flips to `ended` (End-of-prototype
- *   card in slot 0).
- * - `prompt`  — typed into the AI input. While Claude reformats the prompt
- *   into a 3-5 word title, the row's title cycles through fun "thinking"
- *   messages via a scramble animation. When Claude returns, the title
- *   scrambles to the real result and the row flips to `ended` 800ms later.
- *
- * Either way, clicking any skeleton or the End card resets the row.
+ * `phase` goes `loading` → `ready`; `tiles` is populated on `ready`. `token`
+ * identifies the tune so stale timers/intervals don't clobber a newer one.
  */
 type RowOverride = {
-  phase: "loading" | "ended";
-  option: SwitchChannelOption;
-  source: "curated" | "prompt";
+  phase: "loading" | "ready";
+  title: string;
+  source: "prompt";
+  token: string;
+  tiles?: Array<{ title: string; year?: number }>;
 };
 
-const LOADING_TO_ENDED_MS = 3000;
-// Time between the AI-returned title landing and the End-of-prototype card
-// surfacing. The pause lets the user actually read the title before the row
-// terminates.
+// Time the AI-returned title scrambles in (row still shimmering) before the
+// real tiles drop in. Lets the user read the title as the row resolves.
 const PROMPT_TITLE_HOLD_MS = 800;
 // Cadence at which the prompt-flow cycles through loading messages while
 // Claude is in flight. One message lifetime = scramble-in (~600ms) +
@@ -128,19 +123,68 @@ function pickLoadingMessages(): string[] {
   return out;
 }
 
+/**
+ * The pool Claude tunes from: every catalog entry that has artwork, so each
+ * pick it returns resolves to a real, renderable tile. Built once from the
+ * static catalog import.
+ */
+const TUNE_CANDIDATES: TuneCandidate[] = catalog
+  .filter((c) => c.posterUrl || c.backdropUrl)
+  .map((c) => ({ title: c.title, year: c.year, kind: c.kind }));
+
+/**
+ * Resolve Claude's picks to a deduped, art-backed tile list. Picks that don't
+ * resolve in the catalog are dropped; the row is then padded up to
+ * TARGET_TILE_COUNT from the candidate pool so it never looks half-empty.
+ */
+function resolvePicks(
+  picks: Array<{ title: string; year?: number }>,
+  candidates: TuneCandidate[],
+): Array<{ title: string; year?: number }> {
+  const seen = new Set<string>();
+  const out: Array<{ title: string; year?: number }> = [];
+  const take = (title: string, year?: number) => {
+    const entry = findInCatalog(title, year);
+    if (!entry) return;
+    const key = entry.title.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ title: entry.title, year: entry.year });
+  };
+  for (const p of picks) {
+    if (out.length >= TARGET_TILE_COUNT) break;
+    take(p.title, p.year);
+  }
+  for (const c of candidates) {
+    if (out.length >= TARGET_TILE_COUNT) break;
+    take(c.title, c.year);
+  }
+  return out;
+}
+
 function ChannelsContent() {
   const [channels] = useState<Channel[]>(seedChannels);
   const [detail, setDetail] = useState<DetailModalContent | null>(null);
   const [switchTarget, setSwitchTarget] = useState<Channel | null>(null);
   const [rowOverrides, setRowOverrides] = useState<Record<string, RowOverride>>({});
-  const [endModalOpen, setEndModalOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
-  // Per-row loading→ended timers. Tracked so we can cancel if the row is
-  // reset (skeleton clicked) before the timer fires, or replaced by a new
-  // switch before the previous one resolves.
+  // Take Control is a Samsung-sponsored feature: members "enable" it by signing
+  // in with Samsung (entitlement is automatic on a real Samsung TV). Persisted
+  // so the perk stays unlocked across opens and reloads.
+  const [samsungAuthed, setSamsungAuthed] = useState(
+    () => typeof localStorage !== "undefined" && localStorage.getItem("tc-samsung") === "1",
+  );
+  function enableSamsung() {
+    setSamsungAuthed(true);
+    localStorage.setItem("tc-samsung", "1");
+  }
+  function disconnectSamsung() {
+    setSamsungAuthed(false);
+    localStorage.removeItem("tc-samsung");
+  }
+  // Per-row phase timers (loading→ready) and prompt-cycle intervals. Tracked
+  // so a newer tune on the same row cancels an in-flight older one.
   const phaseTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  // Per-row prompt-cycle intervals. Tracked separately so prompt submits
-  // can stop cycling messages without disturbing the phase timer.
   const cycleTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
 
   useEffect(() => {
@@ -165,55 +209,27 @@ function ChannelsContent() {
     }
   }
 
-  function scheduleEndPhase(channelId: string, optionId: string, delayMs: number) {
-    const existing = phaseTimersRef.current[channelId];
-    if (existing) clearTimeout(existing);
-    phaseTimersRef.current[channelId] = setTimeout(() => {
-      delete phaseTimersRef.current[channelId];
-      setRowOverrides((prev) => {
-        const current = prev[channelId];
-        // Only promote if the override still exists and still belongs to the
-        // same option that scheduled this timer.
-        if (!current || current.option.id !== optionId) return prev;
-        if (current.phase === "ended") return prev;
-        return { ...prev, [channelId]: { ...current, phase: "ended" } };
-      });
-    }, delayMs);
-  }
-
-  function handlePickChannel(option: SwitchChannelOption) {
+  // Tune a row from the AI prompt: the title cycles through "thinking" messages
+  // while Claude selects a matching set of real catalog titles; once that lands
+  // the title scrambles to the result and the row fills with those titles. The
+  // media checkboxes constrain the candidate pool to the chosen kinds.
+  function handleSubmitPrompt(prompt: string, kinds: MediaKind[]) {
     if (!switchTarget) return;
     const channelId = switchTarget.id;
-    clearRowTimers(channelId);
-    setRowOverrides((prev) => ({
-      ...prev,
-      [channelId]: { phase: "loading", option, source: "curated" },
-    }));
-    scheduleEndPhase(channelId, option.id, LOADING_TO_ENDED_MS);
-  }
-
-  // Free-text prompts from the modal's AI input run a different flow than
-  // curated picks: the title cycles through fun "thinking" messages while
-  // Claude reformats the prompt into a 3-5 word title; once that lands the
-  // row holds for PROMPT_TITLE_HOLD_MS before flipping to `ended`.
-  function handleSubmitPrompt(prompt: string) {
-    if (!switchTarget) return;
-    const channelId = switchTarget.id;
-    const optionId = `prompt-${Date.now()}`;
+    const token = `prompt-${Date.now()}`;
     const messageQueue = pickLoadingMessages();
 
+    // All three (or somehow none) → no filter; otherwise restrict to the
+    // checked kinds so the row only mixes what the user asked for.
+    const candidates =
+      kinds.length === 0 || kinds.length >= 3
+        ? TUNE_CANDIDATES
+        : TUNE_CANDIDATES.filter((c) => c.kind != null && kinds.includes(c.kind as MediaKind));
+
     clearRowTimers(channelId);
-
-    const option: SwitchChannelOption = {
-      id: optionId,
-      title: messageQueue[0],
-      description: prompt,
-      accent: ["#FF8C00", "#7B2FFF"],
-    };
-
     setRowOverrides((prev) => ({
       ...prev,
-      [channelId]: { phase: "loading", option, source: "prompt" },
+      [channelId]: { phase: "loading", title: messageQueue[0], source: "prompt", token },
     }));
 
     // Cycle through the message queue while the AI call is in flight.
@@ -222,61 +238,70 @@ function ChannelsContent() {
       messageIndex = (messageIndex + 1) % messageQueue.length;
       setRowOverrides((prev) => {
         const current = prev[channelId];
-        if (!current || current.option.id !== optionId) return prev;
-        if (current.phase !== "loading") return prev;
-        return {
-          ...prev,
-          [channelId]: {
-            ...current,
-            option: { ...current.option, title: messageQueue[messageIndex] },
-          },
-        };
+        if (!current || current.token !== token || current.phase !== "loading") return prev;
+        return { ...prev, [channelId]: { ...current, title: messageQueue[messageIndex] } };
       });
     }, PROMPT_CYCLE_MS);
 
-    // Kick off the AI rename in parallel with a minimum-thinking timer. The
-    // scramble animation only reads as "AI working" if it gets to breathe —
-    // Haiku usually returns in 1–2s, so we floor the cycling phase to
-    // MIN_THINKING_MS. On both resolution + min-elapsed, stop the cycle,
-    // swap to the final title, and schedule the end-phase flip.
-    const aiPromise = summarizePromptToTitle(prompt);
-    const minDelay = new Promise<void>((resolve) =>
-      setTimeout(resolve, MIN_THINKING_MS),
-    );
-    Promise.all([aiPromise, minDelay]).then(([finalTitle]) => {
+    // Claude selects from the real catalog, raced against a minimum-thinking
+    // timer so the scramble animation reads as "AI working" (Haiku returns in
+    // 1–2s, too fast to see). On both resolved: stop cycling, scramble to the
+    // final title, then drop in the resolved tiles after PROMPT_TITLE_HOLD_MS.
+    const aiPromise = tuneChannel(prompt, candidates);
+    const minDelay = new Promise<void>((resolve) => setTimeout(resolve, MIN_THINKING_MS));
+    Promise.all([aiPromise, minDelay]).then(([result]) => {
       const interval = cycleTimersRef.current[channelId];
       if (interval) {
         clearInterval(interval);
         delete cycleTimersRef.current[channelId];
       }
+      const tiles = resolvePicks(result.picks, candidates);
       setRowOverrides((prev) => {
         const current = prev[channelId];
-        if (!current || current.option.id !== optionId) return prev;
-        return {
-          ...prev,
-          [channelId]: {
-            ...current,
-            option: { ...current.option, title: finalTitle },
-          },
-        };
+        if (!current || current.token !== token) return prev;
+        return { ...prev, [channelId]: { ...current, title: result.title } };
       });
-      scheduleEndPhase(channelId, optionId, PROMPT_TITLE_HOLD_MS);
+      phaseTimersRef.current[channelId] = setTimeout(() => {
+        delete phaseTimersRef.current[channelId];
+        setRowOverrides((prev) => {
+          const current = prev[channelId];
+          if (!current || current.token !== token) return prev;
+          return {
+            ...prev,
+            [channelId]: { phase: "ready", title: result.title, source: "prompt", token, tiles },
+          };
+        });
+      }, PROMPT_TITLE_HOLD_MS);
     });
   }
 
-  function handleSkeletonClick(channelId: string) {
-    setEndModalOpen(true);
-    clearRowTimers(channelId);
-    setRowOverrides((prev) => {
-      if (!prev[channelId]) return prev;
-      const { [channelId]: _, ...rest } = prev;
-      return rest;
-    });
+  // The hero reflects ONLY the top row (channels[0]). When that row is tuned it
+  // skeletons during loading and then features the first AI-picked title.
+  const topRow = channels[0];
+  const topOverride = rowOverrides[topRow.id];
+  let heroFeature: HeroFeature = { phase: "default" };
+  if (topOverride?.phase === "loading") {
+    heroFeature = { phase: "loading" };
+  } else if (topOverride?.phase === "ready" && topOverride.tiles?.[0]) {
+    const ex = topOverride.tiles[0];
+    const entry = findInCatalog(ex.title, ex.year);
+    const content = buildDetailContent({ entry, fallbackTitle: ex.title, channel: topRow });
+    heroFeature = {
+      phase: "content",
+      title: ex.title,
+      logoUrl: entry?.logoUrl ?? undefined,
+      backdropUrl: entry?.backdropUrl ?? undefined,
+      onOpen: () => setDetail(content),
+    };
   }
 
   return (
     <>
-      <Hero onAboutClick={() => setAboutOpen(true)} />
+      <Hero
+        feature={heroFeature}
+        onTune={() => setSwitchTarget(topRow)}
+        onWatchOverview={() => setAboutOpen(true)}
+      />
 
       <Box
         sx={{
@@ -303,7 +328,7 @@ function ChannelsContent() {
             override={rowOverrides[channel.id]}
             onTileSelect={(content) => setDetail(content)}
             onRequestSwitch={() => setSwitchTarget(channel)}
-            onSkeletonClick={() => handleSkeletonClick(channel.id)}
+            onOpenOverview={() => setAboutOpen(true)}
           />
         ))}
       </Box>
@@ -314,11 +339,13 @@ function ChannelsContent() {
       <SwitchChannelsModal
         open={!!switchTarget}
         channelTitle={switchTarget?.category.title}
+        authed={samsungAuthed}
         onClose={() => setSwitchTarget(null)}
-        onPickChannel={handlePickChannel}
+        onEnable={enableSamsung}
+        onDisconnect={disconnectSamsung}
+        onAbout={() => setAboutOpen(true)}
         onSubmitPrompt={handleSubmitPrompt}
       />
-      <EndOfPrototypeModal open={endModalOpen} onClose={() => setEndModalOpen(false)} />
       <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </>
   );
@@ -668,53 +695,104 @@ export function ProfileCard({ onClose, align = "right" }: { onClose: () => void;
 }
 
 /**
- * Billboard hero. The Netflix backdrop is replaced with the channel-surfing
- * promo video: it sits idle on the first frame until the cursor lands inside
- * the hero, then plays through (muted, looped, no controls) and keeps
- * playing after the mouse leaves. The `hasPlayed` flag guards against
- * re-triggering on every re-enter, so the playback feels continuous.
+ * Hero state, driven solely by the top row (`your-next-watch`):
+ * - `default`  — the "Take Control" billboard over the channel-surfing video.
+ * - `loading`  — skeletons for both the backdrop and the content while the top
+ *   row tunes.
+ * - `content`  — features the first title of the AI-populated top row (its
+ *   backdrop + logo), clickable to open its details.
  */
-function Hero({ onAboutClick }: { onAboutClick: () => void }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const hasPlayedRef = useRef(false);
+// Mesh gradient mixing the channel-bars hover hues — the Control feature's
+// signature backdrop. Shared by the hero, the Control card, and the overview.
+const CONTROL_MESH = `
+  radial-gradient(60% 80% at 82% 22%, rgba(255,45,130,0.85) 0%, rgba(255,45,130,0) 60%),
+  radial-gradient(55% 75% at 96% 68%, rgba(123,47,255,0.80) 0%, rgba(123,47,255,0) 60%),
+  radial-gradient(60% 80% at 60% 94%, rgba(194,24,91,0.75) 0%, rgba(194,24,91,0) 60%),
+  radial-gradient(52% 70% at 42% 30%, rgba(61,111,255,0.70) 0%, rgba(61,111,255,0) 60%),
+  radial-gradient(55% 65% at 16% 12%, rgba(255,140,0,0.70) 0%, rgba(255,140,0,0) 55%),
+  radial-gradient(45% 60% at 8% 84%, rgba(232,58,26,0.65) 0%, rgba(232,58,26,0) 55%),
+  #160B26
+`;
 
-  function handleEnter() {
-    if (hasPlayedRef.current) return;
-    const v = videoRef.current;
-    if (!v) return;
-    const result = v.play();
-    if (result && typeof result.then === "function") {
-      result.then(() => { hasPlayedRef.current = true; }).catch(() => {});
-    } else {
-      hasPlayedRef.current = true;
-    }
-  }
+type HeroFeature =
+  | { phase: "default" }
+  | { phase: "loading" }
+  | { phase: "content"; title: string; logoUrl?: string; backdropUrl?: string; onOpen: () => void };
 
-  // Click anywhere on the hero toggles playback. The More Info button stops
-  // propagation so its own click doesn't also pause the video.
-  function toggleVideo() {
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) {
-      v.play().then(() => { hasPlayedRef.current = true; }).catch(() => {});
-    } else {
-      v.pause();
-    }
-  }
+/**
+ * Primary CTA. Black with white text; the channel-bars glyph stays white at
+ * rest and color-cycles on hover (reusing ChannelBarsIcon's `spinning` mode).
+ */
+function TuneButton({ onClick }: { onClick: () => void }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <Button
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      startIcon={
+        <Box sx={{ color: "#FFFFFF", display: "inline-flex" }}>
+          <ChannelBarsIcon size={20} spinning={hover} />
+        </Box>
+      }
+      sx={{
+        backgroundColor: "#000000",
+        color: "#FFFFFF",
+        fontSize: "clamp(13px, 1.3vw, 17px)",
+        fontWeight: tokens.type.weight.bold,
+        paddingInline: "clamp(18px, 2.4vw, 34px)",
+        paddingBlock: 0,
+        minHeight: "clamp(30px, 3.2vw, 42px)",
+        borderRadius: `${tokens.radius.sm}px`,
+        "&:hover": { backgroundColor: "#1A1A1A" },
+      }}
+    >
+      Tune Channels
+    </Button>
+  );
+}
 
+function HeroSkeletonBar({ width, height }: { width: string; height: number }) {
   return (
     <Box
-      onMouseEnter={handleEnter}
-      onClick={toggleVideo}
+      sx={{
+        width,
+        height,
+        borderRadius: `${tokens.radius.sm}px`,
+        backgroundColor: "rgba(255,255,255,0.13)",
+        "@keyframes heroPulse": { "0%,100%": { opacity: 0.45 }, "50%": { opacity: 0.9 } },
+        animation: "heroPulse 1.4s ease-in-out infinite",
+      }}
+    />
+  );
+}
+
+function Hero({
+  feature,
+  onTune,
+  onWatchOverview,
+}: {
+  feature: HeroFeature;
+  onTune: () => void;
+  onWatchOverview: () => void;
+}) {
+  // Normalized cursor offset (-0.5…0.5) used to gently parallax the mesh.
+  const [parallax, setParallax] = useState({ x: 0, y: 0 });
+  function handleMove(e: React.MouseEvent<HTMLDivElement>) {
+    const r = e.currentTarget.getBoundingClientRect();
+    setParallax({ x: (e.clientX - r.left) / r.width - 0.5, y: (e.clientY - r.top) / r.height - 0.5 });
+  }
+  return (
+    <Box
+      onMouseMove={handleMove}
+      onMouseLeave={() => setParallax({ x: 0, y: 0 })}
       sx={{
         position: "relative",
         height: "clamp(240px, calc(56vw - 120px), 600px)",
         // Hero is full-bleed: escape the TvFrame's horizontal padding so the
-        // backdrop runs to the viewport edges. The rows below also run full
-        // bleed and layer up over the hero's bottom band. The negative
-        // marginTop pulls the hero up under the TvFrame's top padding so the
-        // floating header overlay can sit flush against the viewport edge
-        // and the backdrop image extends behind it.
+        // backdrop runs to the viewport edges. The negative marginTop pulls the
+        // hero up under the TvFrame's top padding so the floating header overlay
+        // sits flush against the viewport edge.
         marginInline: {
           xs: `-${tokens.space.md}px`,
           md: `-${tokens.space.lg}px`,
@@ -726,27 +804,48 @@ function Hero({ onAboutClick }: { onAboutClick: () => void }) {
         },
         backgroundColor: tokens.color.surfaceLow,
         overflow: "hidden",
-        cursor: "pointer",
       }}
     >
-      <Box
-        component="video"
-        ref={videoRef}
-        src={channelSurfingVideoUrl}
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        sx={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          objectPosition: "center 30%",
-          pointerEvents: "none",
-        }}
-      />
+      {/* Backdrop — featured art, skeleton, or the default promo video. */}
+      {feature.phase === "content" && feature.backdropUrl ? (
+        <Box
+          component="img"
+          src={feature.backdropUrl}
+          alt=""
+          sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%", pointerEvents: "none" }}
+        />
+      ) : feature.phase === "loading" ? (
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            backgroundColor: tokens.color.surfaceLow,
+            overflow: "hidden",
+            "@keyframes heroShimmer": { "0%": { transform: "translateX(-100%)" }, "100%": { transform: "translateX(100%)" } },
+            "&::after": {
+              content: '""',
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0) 100%)",
+              animation: "heroShimmer 1.5s linear infinite",
+            },
+          }}
+        />
+      ) : (
+        // Default backdrop — a mesh gradient mixing the channel-bars hover hues.
+        // Oversized so it can gently parallax with the cursor without edge gaps.
+        <Box
+          sx={{
+            position: "absolute",
+            inset: "-8%",
+            transform: `translate(${parallax.x * 28}px, ${parallax.y * 22}px)`,
+            transition: "transform 320ms ease-out",
+            willChange: "transform",
+            background: CONTROL_MESH,
+          }}
+        />
+      )}
+
       <Box
         sx={{
           position: "absolute",
@@ -759,12 +858,26 @@ function Hero({ onAboutClick }: { onAboutClick: () => void }) {
         }}
       />
 
-      {/* Floating header overlay — transparent background, padded to match
-          TvFrame's safe-zone so the wordmark + nav line up with row titles
-          and CTAs below. zIndex above the gradient so the avatar/bell
-          remain readable over dark backdrops. */}
+      {/* Oversized channels glyph, centered in the open space to the right of
+          the content. Each panel sits at 50% and brightens on its own hover. */}
+      {feature.phase === "default" && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: { md: "81%", lg: "76%" },
+            transform: "translate(-50%, -50%)",
+            color: "#FFFFFF",
+            display: { xs: "none", md: "block" },
+            filter: "drop-shadow(0 8px 40px rgba(0,0,0,0.35))",
+          }}
+        >
+          <ChannelBarsIcon size={300} interactive />
+        </Box>
+      )}
+
+      {/* Floating header overlay. */}
       <Box
-        onClick={(e) => e.stopPropagation()}
         sx={{
           position: "absolute",
           top: 0,
@@ -781,12 +894,6 @@ function Hero({ onAboutClick }: { onAboutClick: () => void }) {
         <Header />
       </Box>
 
-      {/*
-        Hero contents — all fluid via clamp() so the title, label, CTAs and
-        side badge grow/shrink continuously with viewport width instead of
-        jumping at MUI breakpoints. Each clamp uses the same vw-multiplier
-        family (~roughly 1.6vw → 4.4vw) so the elements stay in proportion.
-      */}
       <Box
         sx={{
           position: "relative",
@@ -797,90 +904,116 @@ function Hero({ onAboutClick }: { onAboutClick: () => void }) {
           paddingInline: "clamp(24px, 3.2vw, 48px)",
           paddingTop: "clamp(24px, 3.2vw, 48px)",
           paddingBottom: "clamp(56px, 6.5vw, 96px)",
-          maxWidth: { xs: "100%", md: "60%", lg: "50%" },
+          maxWidth: { xs: "100%", md: "62%", lg: "52%" },
         }}
       >
-        {/*
-          Mobile collapses the icon-above-title stack into a single inline
-          row: ~1/3-size icon next to a ~half-size title. From sm up, the
-          original Netflix-billboard treatment returns (full-size icon
-          stacked above the h1).
-        */}
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: { xs: "row", sm: "column" },
-            alignItems: { xs: "center", sm: "flex-start" },
-            gap: { xs: "8px", sm: 0 },
-            mb: "clamp(20px, 2.2vw, 32px)",
-          }}
-        >
-          <Box
-            sx={{
-              color: tokens.color.textPrimary,
-              mb: { xs: 0, sm: "clamp(8px, 1vw, 14px)" },
-              filter: "drop-shadow(0 4px 24px rgba(0,0,0,0.55))",
-              display: { xs: "inline-flex", sm: "none" },
-            }}
-          >
-            <ChannelBarsIcon size={21} />
+        {feature.phase === "loading" ? (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: "14px", mb: "clamp(16px, 2vw, 28px)" }}>
+            <HeroSkeletonBar width="min(440px, 72%)" height={52} />
+            <HeroSkeletonBar width="min(320px, 56%)" height={20} />
+            <HeroSkeletonBar width="min(240px, 42%)" height={20} />
           </Box>
+        ) : feature.phase === "content" ? (
           <Box
-            sx={{
-              color: tokens.color.textPrimary,
-              mb: { xs: 0, sm: "clamp(8px, 1vw, 14px)" },
-              filter: "drop-shadow(0 4px 24px rgba(0,0,0,0.55))",
-              display: { xs: "none", sm: "inline-flex" },
-            }}
+            role="button"
+            onClick={feature.onOpen}
+            sx={{ cursor: "pointer", mb: "clamp(16px, 2vw, 28px)", display: "inline-flex", maxWidth: "100%" }}
           >
-            <ChannelBarsIcon size={64} />
+            {feature.logoUrl ? (
+              <Box
+                component="img"
+                src={feature.logoUrl}
+                alt={feature.title}
+                sx={{
+                  maxWidth: "min(440px, 80%)",
+                  maxHeight: "clamp(64px, 12vw, 150px)",
+                  objectFit: "contain",
+                  objectPosition: "left bottom",
+                  filter: "drop-shadow(0 4px 24px rgba(0,0,0,0.55))",
+                }}
+              />
+            ) : (
+              <Typography
+                component="h1"
+                sx={{
+                  fontSize: { xs: 26, sm: "clamp(36px, 5.6vw, 80px)" },
+                  lineHeight: 1.02,
+                  color: tokens.color.textPrimary,
+                  fontWeight: tokens.type.weight.bold,
+                  letterSpacing: "-0.02em",
+                  textShadow: "0 4px 24px rgba(0,0,0,0.55)",
+                }}
+              >
+                {feature.title}
+              </Typography>
+            )}
           </Box>
+        ) : (
+          <>
+            <Box
+              sx={{
+                mb: "clamp(10px, 1.2vw, 16px)",
+                filter: "drop-shadow(0 4px 24px rgba(0,0,0,0.55))",
+                "@keyframes controlIn": {
+                  from: { opacity: 0, transform: "translateY(20px)" },
+                  to: { opacity: 1, transform: "translateY(0)" },
+                },
+                animation: "controlIn 650ms cubic-bezier(0.22, 1, 0.36, 1) both",
+              }}
+            >
+              <ControlWordmark height="clamp(34px, 5.2vw, 64px)" color="#FFFFFF" />
+            </Box>
 
-          <Typography
-            component="h1"
-            sx={{
-              fontSize: { xs: 20, sm: "clamp(40px, 6.4vw, 88px)" },
-              lineHeight: 1,
-              color: tokens.color.textPrimary,
-              fontWeight: tokens.type.weight.bold,
-              letterSpacing: "-0.02em",
-              textShadow: "0 4px 24px rgba(0,0,0,0.55)",
-            }}
-          >
-            Switch Channels
-          </Typography>
-        </Box>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                mb: "clamp(14px, 1.8vw, 24px)",
+                color: "rgba(255,255,255,0.82)",
+                fontSize: "clamp(11px, 1vw, 13px)",
+              }}
+            >
+              Presented by <SamsungWordmark height={12} color="#FFFFFF" />
+            </Box>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: "clamp(8px, 1vw, 16px)" }}>
+            <Typography
+              sx={{
+                color: tokens.color.textPrimary,
+                fontSize: "clamp(14px, 1.5vw, 22px)",
+                maxWidth: "36ch",
+                mb: "clamp(16px, 2vw, 28px)",
+                textShadow: "0 2px 12px rgba(0,0,0,0.6)",
+              }}
+            >
+              Tune channels to control your content
+            </Typography>
+          </>
+        )}
+
+        <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "clamp(8px, 1vw, 16px)" }}>
+          <TuneButton onClick={onTune} />
           <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              onAboutClick();
-            }}
-            startIcon={<InfoOutlinedIcon sx={{ fontSize: "clamp(16px, 1.8vw, 22px)" }} />}
+            onClick={onWatchOverview}
+            startIcon={<PlayArrowIcon sx={{ fontSize: "clamp(20px, 2.2vw, 28px)" }} />}
             sx={{
-              backgroundColor: "rgba(109, 109, 110, 0.7)",
-              color: tokens.color.textPrimary,
-              fontSize: "clamp(12px, 1.2vw, 15px)",
+              backgroundColor: tokens.color.textPrimary,
+              color: tokens.color.base,
+              fontSize: "clamp(13px, 1.3vw, 17px)",
               fontWeight: tokens.type.weight.bold,
-              paddingInline: "clamp(14px, 2vw, 26px)",
+              paddingInline: "clamp(18px, 2.4vw, 34px)",
               paddingBlock: 0,
-              minHeight: "clamp(28px, 3vw, 38px)",
+              minHeight: "clamp(30px, 3.2vw, 42px)",
               borderRadius: `${tokens.radius.sm}px`,
-              "&:hover": { backgroundColor: "rgba(109, 109, 110, 0.85)" },
+              "&:hover": { backgroundColor: "rgba(255,255,255,0.85)" },
             }}
           >
-            Prototype Info
+            Watch Overview
           </Button>
         </Box>
       </Box>
 
-      {/*
-        TV-NERD rating. Pinned to the viewport's right edge (right: 0) so
-        the badge butts right up against the screen, in the spirit of the
-        Netflix maturity-rating chip but tipping a wink that this surface
-        is for design-curious viewers, not a general audience.
-      */}
+      {/* Premium rating chip. */}
       <Box
         sx={{
           position: "absolute",
@@ -895,9 +1028,13 @@ function Hero({ onAboutClick }: { onAboutClick: () => void }) {
           fontWeight: tokens.type.weight.semibold,
           letterSpacing: "0.04em",
           pointerEvents: "none",
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
         }}
       >
-        TV-NERD
+        <CheckIcon sx={{ fontSize: "clamp(13px, 1.3vw, 17px)" }} />
+        Premium
       </Box>
     </Box>
   );
@@ -1068,60 +1205,79 @@ function ChannelRow({
   override,
   onTileSelect,
   onRequestSwitch,
-  onSkeletonClick,
+  onOpenOverview,
 }: {
   channel: Channel;
   override?: RowOverride;
   onTileSelect: (content: DetailModalContent) => void;
   onRequestSwitch: () => void;
-  onSkeletonClick: () => void;
+  onOpenOverview: () => void;
 }) {
   const sectionId = `channel-${channel.id}`;
   const isTopTen = channel.id === "top-10-tv-us";
-  const sourceTiles = channel.category.exemplars;
-  const tiles = isTopTen
-    ? sourceTiles.slice(0, 10)
-    : Array.from({ length: TARGET_TILE_COUNT }, (_, i) => sourceTiles[i % sourceTiles.length]);
+  // The first row is the "tunable canvas": it keeps two permanent action cards
+  // (Tune Channels / Explore Games) and the override only replaces the content
+  // after them, so the cards — and the hero that mirrors them — stay stable.
+  const isFirstRow = channel.id === "your-next-watch";
+  const loading = override?.phase === "loading";
+
+  // A ready override supplies the real tuned tiles; otherwise the row shows its
+  // own exemplars. Either way we pad up to TARGET_TILE_COUNT (Top 10 stays 10).
+  const contentSource =
+    override?.phase === "ready" && override.tiles ? override.tiles : channel.category.exemplars;
+  const contentTiles = isTopTen
+    ? contentSource.slice(0, 10)
+    : Array.from({ length: TARGET_TILE_COUNT }, (_, i) => contentSource[i % contentSource.length]);
 
   function selectTile(exemplar: { title: string; year?: number }, i: number) {
     const entry = findInCatalog(exemplar.title, exemplar.year);
     onTileSelect(buildDetailContent({ entry, fallbackTitle: exemplar.title, channel, rank: isTopTen ? i + 1 : undefined }));
   }
 
-  // When the row has been switched, replace its label/icon/contents with the
-  // override option's identity. The channel-bar icon spins only during the
-  // loading phase; once the End card surfaces, it stops to signal arrival.
-  const displayTitle = override ? override.option.title : channel.category.title;
-  const leadingIcon = <ChannelBarsIcon spinning={override?.phase === "loading"} />;
-  // Prompt-driven switches scramble each title change (cycling "thinking"
-  // messages and the final AI-returned title). Curated picks change the
-  // title exactly once and don't need the animation.
+  // While the row is tuned, swap its label/icon for the override's title. The
+  // channel-bar icon spins only during loading; it stops once tiles arrive.
+  const displayTitle = override ? override.title : channel.category.title;
+  const leadingIcon = <ChannelBarsIcon spinning={loading} />;
+  // Prompt-driven tunes scramble each title change (cycling "thinking" messages
+  // then the final AI title). The Games action changes the title exactly once.
   const titleNode: ReactNode =
     override?.source === "prompt" ? <ScrambleText target={displayTitle} /> : displayTitle;
 
-  if (override) {
-    // After a row is switched, drop its original layout (Top 10 numerals etc.).
-    // During loading the whole row is skeletons; after ~3s the first slot
-    // resolves to the End-of-prototype card. Clicking either surfaces the
-    // modal and resets the row.
-    const slotCount = TARGET_TILE_COUNT;
-    const isEnded = override.phase === "ended";
+  const renderBoxartTile = (ex: { title: string; year?: number }, i: number) => {
+    const entry = findInCatalog(ex.title, ex.year);
+    return (
+      <ChannelTile
+        key={ex.title + i}
+        index={i}
+        title={ex.title}
+        color={channel.tilePalette[i % channel.tilePalette.length]}
+        artworkUrl={entry?.backdropUrl ?? undefined}
+        logoUrl={entry?.logoUrl ?? undefined}
+        badge={override ? mediaBadge(entry?.kind) : badgeForChannel(channel.id, i, contentTiles.length)}
+        moodTags={channel.category.tone.slice(0, 3)}
+        aspect="boxart"
+        onSelect={() => selectTile(ex, i)}
+      />
+    );
+  };
+
+  const skeletons = (n: number) =>
+    Array.from({ length: n }, (_, i) => <SkeletonTile key={`sk-${i}`} aspect="boxart" />);
+
+  // Non-first rows that have been tuned render as a plain Row (dropping Top 10
+  // numerals etc.): loading shimmer, then the real tuned tiles.
+  if (override && !isFirstRow) {
     return (
       <Row
         sectionId={sectionId}
-        itemCount={slotCount}
+        itemCount={TARGET_TILE_COUNT}
         title={titleNode}
         leadingIcon={leadingIcon}
+        hoverHint={<ShuffleIcon sx={{ fontSize: 16 }} />}
         onTitleClick={onRequestSwitch}
         itemsPerView={{ xs: 2, sm: 3, md: 4, lg: 5, xl: 6 }}
       >
-        {Array.from({ length: slotCount }).map((_, i) =>
-          isEnded && i === 0 ? (
-            <EndOfPrototypeTile key="end" onClick={onSkeletonClick} />
-          ) : (
-            <SkeletonTile key={i} aspect="boxart" onClick={onSkeletonClick} />
-          ),
-        )}
+        {loading ? skeletons(TARGET_TILE_COUNT) : contentTiles.map(renderBoxartTile)}
       </Row>
     );
   }
@@ -1130,7 +1286,7 @@ function ChannelRow({
     return (
       <TopTenRow
         sectionId={sectionId}
-        itemCount={tiles.length}
+        itemCount={contentTiles.length}
         title={displayTitle}
         leadingIcon={leadingIcon}
         hoverHint={<ShuffleIcon sx={{ fontSize: 16 }} />}
@@ -1139,7 +1295,7 @@ function ChannelRow({
         // the boxart cards in adjacent rows — the Netflix homepage rule.
         itemsPerView={{ xs: 2, sm: 3, md: 4, lg: 5, xl: 6 }}
       >
-        {tiles.map((ex, i) => {
+        {contentTiles.map((ex, i) => {
           const catalogEntry = findInCatalog(ex.title, ex.year);
           return (
             <ChannelTile
@@ -1149,6 +1305,7 @@ function ChannelRow({
               color={channel.tilePalette[i % channel.tilePalette.length]}
               artworkUrl={catalogEntry?.posterUrl ?? undefined}
               expandedArtworkUrl={catalogEntry?.backdropUrl ?? undefined}
+              logoUrl={catalogEntry?.logoUrl ?? undefined}
               expandsToLandscape
               fillHeight
               badge={undefined}
@@ -1162,59 +1319,44 @@ function ChannelRow({
     );
   }
 
+  // Default row (includes the first row). The first row carries the Take Control
+  // media card (the prototype explainer): it leads at rest, but once the row is
+  // tuned it moves to the end so the fresh results lead.
+  const contentNodes = loading ? skeletons(TARGET_TILE_COUNT) : contentTiles.map(renderBoxartTile);
+  const takeControl = <TakeControlTile key="take-control" onClick={onOpenOverview} />;
+  const children: ReactNode[] = isFirstRow
+    ? override
+      ? [...contentNodes, takeControl]
+      : [takeControl, ...contentNodes]
+    : contentNodes;
+
   return (
     <Row
       sectionId={sectionId}
-      itemCount={tiles.length}
-      title={displayTitle}
+      itemCount={children.length}
+      title={titleNode}
       leadingIcon={leadingIcon}
       hoverHint={<ShuffleIcon sx={{ fontSize: 16 }} />}
       onTitleClick={onRequestSwitch}
       itemsPerView={{ xs: 2, sm: 3, md: 4, lg: 5, xl: 6 }}
     >
-      {tiles.map((ex, i) => {
-        const catalogEntry = findInCatalog(ex.title, ex.year);
-        return (
-          <ChannelTile
-            key={ex.title + i}
-            index={i}
-            title={ex.title}
-            color={channel.tilePalette[i % channel.tilePalette.length]}
-            artworkUrl={catalogEntry?.backdropUrl ?? undefined}
-            logoUrl={catalogEntry?.logoUrl ?? undefined}
-            badge={badgeForChannel(channel.id, i, tiles.length)}
-            moodTags={channel.category.tone.slice(0, 3)}
-            aspect="boxart"
-            onSelect={() => selectTile(ex, i)}
-          />
-        );
-      })}
+      {children}
     </Row>
   );
 }
 
 /**
- * Placeholder card shown after a row is switched-out. Mirrors the resting
- * tile geometry so the row's height doesn't jump. A shimmer animation
- * conveys activity. Clicking any skeleton ends the prototype — there's
- * nothing real to load beyond this point.
+ * Placeholder card shown while a row is tuning. Mirrors the resting tile
+ * geometry so the row's height doesn't jump, with a shimmer to convey activity.
+ * Non-interactive: it resolves to real tiles on its own once tuning completes.
  */
-function SkeletonTile({
-  aspect,
-  onClick,
-}: {
-  aspect: "boxart" | "poster";
-  onClick: () => void;
-}) {
+function SkeletonTile({ aspect }: { aspect: "boxart" | "poster" }) {
   const restAspect = aspect === "boxart" ? "16 / 9" : "2 / 3";
   // Width comes from Row's `& > *` rule (cardW). We only set the aspect ratio,
   // matching how the responsive Tile primitive sizes itself in the same row.
   return (
     <Box
-      component="button"
-      type="button"
-      onClick={onClick}
-      aria-label="End of prototype"
+      aria-hidden
       sx={{
         aspectRatio: restAspect,
         flexShrink: 0,
@@ -1222,11 +1364,6 @@ function SkeletonTile({
         backgroundColor: tokens.color.surfaceMid,
         position: "relative",
         overflow: "hidden",
-        padding: 0,
-        border: 0,
-        cursor: "pointer",
-        color: "inherit",
-        font: "inherit",
         "@keyframes channelSkeletonShimmer": {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(100%)" },
@@ -1245,188 +1382,41 @@ function SkeletonTile({
 }
 
 /**
- * End-of-prototype card. Drops into the first slot of a switched row once the
- * 3s skeleton loading window elapses. Matches the boxart aspect of the
- * surrounding skeletons so the row height stays put, and carries a small
- * white badge so the user can read it as a deliberate card and not another
- * placeholder. Clicking it fires the same handler as the skeletons: open the
- * end-of-prototype modal and reset the row.
+ * Take Control media card — the first card in the top row. Reuses the Tile
+ * primitive so it gets the same hover-bloom + popover info panel as every other
+ * card; clicking it opens the Take Control overview.
  */
-function EndOfPrototypeTile({ onClick }: { onClick: () => void }) {
+function TakeControlTile({ onClick }: { onClick: () => void }) {
   return (
-    <Box
-      component="button"
-      type="button"
+    <Tile
+      focused={false}
       onClick={onClick}
-      aria-label="End of prototype"
-      sx={{
-        aspectRatio: "16 / 9",
-        flexShrink: 0,
-        borderRadius: `${tokens.radius.sm}px`,
-        position: "relative",
-        overflow: "hidden",
-        padding: 0,
-        border: 0,
-        cursor: "pointer",
-        color: "inherit",
-        font: "inherit",
-        backgroundColor: tokens.color.surfaceMid,
-        backgroundImage: `url(${thisIsTheEndUrl})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        display: "block",
-        transition: `transform ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
-        "&:hover, &:focus-visible": {
-          outline: "none",
-          transform: "scale(1.02)",
-        },
-        "&::after": {
-          content: '""',
-          position: "absolute",
-          inset: 0,
-          background:
-            "linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.65) 100%)",
-        },
-      }}
-    >
-      <Box
-        sx={{
-          position: "absolute",
-          left: 10,
-          bottom: 10,
-          paddingInline: "8px",
-          paddingBlock: "3px",
-          borderRadius: 4,
-          backgroundColor: "rgba(255,255,255,0.92)",
-          color: tokens.color.base,
-          fontSize: 10,
-          fontWeight: tokens.type.weight.bold,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          zIndex: 1,
-        }}
-      >
-        End of Prototype
-      </Box>
-    </Box>
-  );
-}
-
-/**
- * Final-state modal: tells the user the prototype ends here, with an Esc
- * affordance and a close button. Centered overlay matching the surrounding
- * modal language.
- */
-function EndOfPrototypeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
-  return (
-    <Box
-      role="dialog"
-      aria-modal="true"
-      aria-label="End of prototype"
-      onClick={onClose}
-      sx={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1300,
-        backgroundColor: "rgba(0,0,0,0.78)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        paddingInline: `${tokens.space.lg}px`,
-      }}
-    >
-      <Box
-        onClick={(e) => e.stopPropagation()}
-        sx={{
-          position: "relative",
-          width: "100%",
-          maxWidth: 480,
-          backgroundColor: tokens.color.surfaceLow,
-          borderRadius: `${tokens.radius.md}px`,
-          color: tokens.color.textPrimary,
-          boxShadow: tokens.shadow.lg,
-          overflow: "hidden",
-          textAlign: "center",
-        }}
-      >
-        <IconButton
-          aria-label="Close"
-          onClick={onClose}
-          sx={{
-            position: "absolute",
-            top: tokens.space.sm,
-            right: tokens.space.sm,
-            width: 32,
-            height: 32,
-            backgroundColor: "rgba(20,20,20,0.7)",
-            color: tokens.color.textPrimary,
-            zIndex: 2,
-            "&:hover": { backgroundColor: tokens.color.base },
-          }}
-        >
-          <CloseIcon sx={{ fontSize: 20 }} />
-        </IconButton>
-        <Box
-          component="img"
-          src={thisIsTheEndUrl}
-          alt=""
-          sx={{
-            width: "100%",
-            aspectRatio: "16 / 9",
-            objectFit: "cover",
-            display: "block",
-          }}
-        />
-        <Box
-          sx={{
-            paddingInline: `${tokens.space.xl}px`,
-            paddingTop: `${tokens.space.lg}px`,
-            paddingBottom: `${tokens.space.lg}px`,
-          }}
-        >
-          <Typography
-            sx={{
-              fontSize: 26,
-              fontWeight: tokens.type.weight.bold,
-              lineHeight: 1.15,
-              letterSpacing: "-0.015em",
-              marginBottom: `${tokens.space.sm}px`,
-            }}
-          >
-            This is the end of the prototype…
-          </Typography>
-          <Typography
-            sx={{ fontSize: 14, color: tokens.color.textSecondary, lineHeight: 1.5 }}
-          >
-            …for now.
-          </Typography>
+      responsive
+      aspect="boxart"
+      color={CONTROL_MESH}
+      edgeAnchor="left"
+      artwork={
+        <Box sx={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: "8%" }}>
+          <Box
+            component="img"
+            src={CONTROL_LOGO_DATA_URI}
+            alt="Control"
+            sx={{ width: "64%", filter: "drop-shadow(0 2px 10px rgba(0,0,0,0.45))" }}
+          />
         </Box>
-      </Box>
-    </Box>
+      }
+      expansion={{
+        description: "Presented by Samsung. Open the overview to see how it works.",
+        moodTags: ["movies", "shows", "games"],
+      }}
+    />
   );
 }
 
 /**
- * About-this-project modal. Fires from the hero's "More Info" button. Same
- * centered-overlay language as DetailModal / SwitchChannelsModal / IdeaHopperModal.
+ * Take Control explainer modal. Fires from the hero's "Watch" button and the
+ * Take Control media card. Same centered-overlay language as DetailModal /
+ * SwitchChannelsModal — this is where the prototype describes itself.
  */
 function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   useEffect(() => {
@@ -1451,7 +1441,7 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
     <Box
       role="dialog"
       aria-modal="true"
-      aria-label="About this project"
+      aria-label="Control"
       onClick={onClose}
       sx={{
         position: "fixed",
@@ -1475,79 +1465,131 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           borderRadius: { xs: 0, md: `${tokens.radius.md}px` },
           color: tokens.color.textPrimary,
           boxShadow: tokens.shadow.lg,
-          paddingInline: { xs: `${tokens.space.lg}px`, md: `${tokens.space.xl}px` },
-          paddingTop: { xs: `${tokens.space.xl}px`, md: `${tokens.space["2xl"]}px` },
-          paddingBottom: `${tokens.space.xl}px`,
+          overflow: "hidden",
         }}
       >
-        <IconButton
-          aria-label="Close"
-          onClick={onClose}
+        {/* Hero — mesh backdrop + Control logo, mirroring the title modals. */}
+        <Box sx={{ position: "relative", width: "100%", aspectRatio: "620 / 300", background: CONTROL_MESH, overflow: "hidden" }}>
+          <Box
+            sx={{
+              position: "absolute",
+              top: "50%",
+              right: "-4%",
+              transform: "translateY(-50%)",
+              opacity: 0.5,
+              color: "#FFFFFF",
+              display: { xs: "none", sm: "block" },
+              pointerEvents: "none",
+            }}
+          >
+            <ChannelBarsIcon size={200} />
+          </Box>
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              background: `
+                linear-gradient(180deg, rgba(20,20,20,0) 38%, rgba(20,20,20,0.5) 72%, ${tokens.color.surfaceLow} 100%),
+                linear-gradient(90deg, rgba(20,20,20,0.5) 0%, rgba(20,20,20,0) 62%)
+              `,
+            }}
+          />
+          <IconButton
+            aria-label="Close"
+            onClick={onClose}
+            sx={{
+              position: "absolute",
+              top: tokens.space.md,
+              right: tokens.space.md,
+              width: 36,
+              height: 36,
+              backgroundColor: "rgba(20,20,20,0.7)",
+              color: tokens.color.textPrimary,
+              "&:hover": { backgroundColor: tokens.color.base },
+            }}
+          >
+            <CloseIcon sx={{ fontSize: 22 }} />
+          </IconButton>
+          <Box
+            sx={{
+              position: "absolute",
+              bottom: tokens.space.lg,
+              left: { xs: tokens.space.lg, md: tokens.space.xl },
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+            }}
+          >
+            <ControlWordmark height="clamp(28px, 6.5vw, 46px)" color="#FFFFFF" />
+            <Box sx={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "rgba(255,255,255,0.82)", fontSize: 12 }}>
+              Presented by <SamsungWordmark height={11} color="#FFFFFF" />
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Body */}
+        <Box
           sx={{
-            position: "absolute",
-            top: tokens.space.md,
-            right: tokens.space.md,
-            width: 36,
-            height: 36,
-            backgroundColor: "rgba(20,20,20,0.7)",
-            color: tokens.color.textPrimary,
-            "&:hover": { backgroundColor: tokens.color.base },
+            paddingInline: { xs: `${tokens.space.lg}px`, md: `${tokens.space.xl}px` },
+            paddingTop: `${tokens.space.lg}px`,
+            paddingBottom: `${tokens.space.xl}px`,
           }}
         >
-          <CloseIcon sx={{ fontSize: 22 }} />
-        </IconButton>
+          {/* Overview walkthrough video. */}
+          <Box
+            component="iframe"
+            src="https://www.loom.com/embed/7f790ed025b94629ab89666cbc1dbe42"
+            title="Control overview"
+            allowFullScreen
+            sx={{
+              width: "100%",
+              aspectRatio: "4 / 3",
+              border: 0,
+              borderRadius: `${tokens.radius.sm}px`,
+              display: "block",
+              backgroundColor: tokens.color.base,
+              marginBottom: `${tokens.space.lg}px`,
+            }}
+          />
 
-        <Typography
-          sx={{
-            fontSize: tokens.type.scale.micro.size,
-            color: tokens.color.accent,
-            letterSpacing: tokens.type.scale.micro.letterSpacing,
-            textTransform: "uppercase",
-            fontWeight: tokens.type.weight.semibold,
-            marginBottom: "8px",
-          }}
-        >
-          Prototype info
-        </Typography>
-        <Typography
-          sx={{
-            fontSize: { xs: 28, md: 34 },
-            lineHeight: 1.1,
-            letterSpacing: "-0.015em",
-            fontWeight: tokens.type.weight.bold,
-            marginBottom: `${tokens.space.md}px`,
-          }}
-        >
-          Three nights and a Figma MCP server.
-        </Typography>
+          <Typography
+            sx={{
+              fontSize: tokens.type.scale.micro.size,
+              color: tokens.color.accent,
+              letterSpacing: tokens.type.scale.micro.letterSpacing,
+              fontWeight: tokens.type.weight.semibold,
+              marginBottom: `${tokens.space.sm}px`,
+            }}
+          >
+            Control · a Netflix design prototype
+          </Typography>
 
-        <Box sx={{ display: "flex", flexDirection: "column", gap: `${tokens.space.sm}px` }}>
-          <AboutSectionLabel>How it started</AboutSectionLabel>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: `${tokens.space.sm}px` }}>
+            <AboutSectionLabel>What this is</AboutSectionLabel>
           <AboutParagraph>
-            This started as an excuse to play with Figma's MCP server. I pulled in Ivanna Jeraskina's Netflix design system from the Figma community, pointed Claude at it, and was moving in an hour. From there I just kept going.
-          </AboutParagraph>
-          <AboutParagraph>
-            The next three nights became a small obsession. Match the hero. Match the row scroll. Match the card pop. Match the badges. The point wasn't to ship a clone. It was to see how close I could get to the real surface using my own pile of tools.
-          </AboutParagraph>
-          <AboutParagraph>
-            It turned out to be the perfect overlap of what I do and what I'm interested in right now. Design systems. AI as a building partner. Real surfaces that respond. I'd be lying if I said it wasn't fun.
+            Control is a browser prototype for the hardest part of Netflix — deciding what to watch. You take control of a row: describe what you're in the mood for and it retunes into a real mix of movies, shows, and games, chosen in the moment.
           </AboutParagraph>
 
-          <AboutSectionLabel>How to use it</AboutSectionLabel>
+          <AboutSectionLabel>An experiment in ingredients</AboutSectionLabel>
           <AboutParagraph>
-            Click any row title to switch the channel. The modal that opens lets you type a custom prompt or pick a curated channel. Either way, the row reshapes itself around that new identity. Skeleton tiles load in. Clicking any one of them takes you to the end of the prototype.
+            The bigger idea is widening what goes into the mix. Alongside movies and shows, this version pulls in games, and treats partnerships as a first-class ingredient: Control is presented by Samsung and unlocked through a partner sign-in — the way a device maker or carrier could light it up for their members. More ingredients, better mixes.
           </AboutParagraph>
 
-          <AboutSectionLabel>What's mimicry, what's the actual design</AboutSectionLabel>
+          <AboutSectionLabel>How it works</AboutSectionLabel>
           <AboutParagraph>
-            Most of what you see is mimicry. The hero. The rows. The card pop. The badges. The footer. The avatar menu. The typography. All set dressing, there to make the surface feel real enough that the new behavior reads as a design choice and not a CSS demo.
+            Open Tune Channels, or click any row title, and describe what you want — something like a tense sci-fi heist, or cozy games and shows. Claude reads your prompt and picks a matching set of titles from a real catalog, so the row fills with actual artwork. Choose which media types to include, and the hero features the first result.
           </AboutParagraph>
+
+          <AboutSectionLabel>What's real, what's set dressing</AboutSectionLabel>
           <AboutParagraph>
-            The actual feature design lives in one place: the act of switching a row. Typing what you want, watching the row reshape, and asking whether the third iteration would land any better than the first. That loop is the prototype. Everything else is the room around it.
+            The catalog and its artwork are real, pulled from public movie, show, and game databases, and the tuning is a live Claude call that chooses from it. Everything around it — the chrome, the badges, the modals — is faithful set dressing so the new behavior reads as a design choice rather than a demo.
           </AboutParagraph>
+
+          <AboutSectionLabel>What's next</AboutSectionLabel>
           <AboutParagraph>
-            If you have your own idea, clone the repo and try it.
+            More discovery levers — playful, engaging ways to steer the mix beyond a text box — plus more partner and content ingredients. The walkthrough above shows where it stands today.
           </AboutParagraph>
+          </Box>
         </Box>
       </Box>
     </Box>
@@ -1575,7 +1617,6 @@ function AboutSectionLabel({ children }: { children: ReactNode }) {
         fontSize: tokens.type.scale.micro.size,
         color: tokens.color.textPrimary,
         letterSpacing: tokens.type.scale.micro.letterSpacing,
-        textTransform: "uppercase",
         fontWeight: tokens.type.weight.semibold,
         marginTop: `${tokens.space.md}px`,
         "&:first-of-type": { marginTop: 0 },
@@ -1623,10 +1664,13 @@ const STEP_S = CHANNEL_BAR_CYCLE_DURATION_S / CHANNEL_BAR_COLORS.length;
 export function ChannelBarsIcon({
   size = 22,
   spinning = false,
+  interactive = false,
 }: {
   size?: number;
   /** When true, run the color-cycle animation continuously (no hover needed). */
   spinning?: boolean;
+  /** When true, each panel sits at 50% and brightens to full on its own hover. */
+  interactive?: boolean;
 }) {
   // Each bar runs the same keyframe but with a one-step negative delay per
   // index — so at any moment the bars sit at six adjacent points in the cycle
@@ -1669,6 +1713,11 @@ export function ChannelBarsIcon({
         flexShrink: 0,
         "@keyframes channelBarCycle": cycleKeyframe,
         ...perPathStyles,
+        ...(interactive && {
+          pointerEvents: "auto",
+          "& path": { opacity: 0.5, transition: "opacity 220ms ease" },
+          "& path:hover": { opacity: 1 },
+        }),
       }}
     >
       {CHANNEL_BAR_PATHS.map((d, i) => (
@@ -1679,10 +1728,22 @@ export function ChannelBarsIcon({
 }
 
 /**
- * Pick a per-tile badge based on the channel's identity. Mimics the editorial
- * mix of "Recently Added" / "New Episode" + "Watch Now" / "New Season" badges
- * visible on a real Netflix homepage. Badges are paired: red primary +
- * optional white secondary.
+ * Per-tile media-type badge, keyed off the catalog entry's kind: red for
+ * movies, white for shows, black for games. Used only on AI-tuned rows so a
+ * mixed result reads at a glance which cards are which; untuned rows keep their
+ * editorial badges (see badgeForChannel).
+ */
+function mediaBadge(kind: CatalogEntry["kind"] | undefined): TileBadge | undefined {
+  if (kind === "movie") return { red: "Movie" };
+  if (kind === "tv") return { white: "Show" };
+  if (kind === "game") return { black: "Game" };
+  return undefined;
+}
+
+/**
+ * Editorial badge for untuned rows. Mimics the mix of "Recently Added" /
+ * "New Episode" + "Watch Now" / "New Season" badges on a real Netflix homepage.
+ * Badges are paired: red primary + optional white secondary.
  */
 function badgeForChannel(channelId: string, index: number, total: number): TileBadge | undefined {
   if (channelId === "new-on-netflix") {
