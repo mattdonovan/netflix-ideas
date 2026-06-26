@@ -36,6 +36,7 @@ const TILE_DIMENSIONS: Record<TileAspect, Record<TileSize, { width: number; heig
 export type TileBadge = {
   red?: string;
   white?: string;
+  black?: string;
 };
 
 export type TileExpansion = {
@@ -44,6 +45,9 @@ export type TileExpansion = {
   duration?: string;
   format?: string;
   moodTags?: string[];
+  /** Free-text blurb shown in the hover panel — used by non-title cards (e.g.
+   *  the Take Control card) that describe themselves rather than carry metadata. */
+  description?: string;
 };
 
 /**
@@ -165,6 +169,10 @@ export function Tile({
   // them be.
   const titleArtOnImage = aspect === "boxart";
   const isLandscapeExpansion = !!expandsToLandscape;
+  // The hover partial is always landscape backdrop art — boxart's own artwork,
+  // or a poster row's expandedArtworkUrl. So it carries the title overlay even
+  // when the resting portrait poster (baked-in title) deliberately doesn't.
+  const expandedTitleArt = titleArtOnImage || isLandscapeExpansion;
   // The hover partial enters at its final landscape shape immediately (no
   // morph). Aspect-ratio doesn't animate — only opacity (snap on in, fade on
   // out) and scale do.
@@ -292,6 +300,8 @@ export function Tile({
               flexShrink: 0,
             }}
           >
+            {artwork}
+
             {hasImage && (
               <Box
                 sx={{
@@ -312,13 +322,13 @@ export function Tile({
               </Box>
             )}
 
-            {hasImage && titleArtOnImage ? (
+            {hasImage && expandedTitleArt ? (
               <TileTitleArt logoUrl={logoUrl} title={title} badge={badge} />
             ) : (
               !hasImage && title && <TileTitleArt title={title} badge={badge} />
             )}
 
-            {badge && (badge.red || badge.white) && (
+            {badge && (badge.red || badge.white || badge.black) && (
               <Box
                 sx={{
                   position: "absolute",
@@ -332,6 +342,7 @@ export function Tile({
               >
                 {badge.red && <BadgePill text={badge.red} variant="red" />}
                 {badge.white && <BadgePill text={badge.white} variant="white" />}
+                {badge.black && <BadgePill text={badge.black} variant="black" />}
               </Box>
             )}
           </Box>
@@ -413,7 +424,7 @@ function CardImageArea({
         </Box>
       )}
 
-      {badge && (badge.red || badge.white) && (
+      {badge && (badge.red || badge.white || badge.black) && (
         <Box
           sx={{
             position: "absolute",
@@ -427,6 +438,7 @@ function CardImageArea({
         >
           {badge.red && <BadgePill text={badge.red} variant="red" />}
           {badge.white && <BadgePill text={badge.white} variant="white" />}
+          {badge.black && <BadgePill text={badge.black} variant="black" />}
         </Box>
       )}
     </Box>
@@ -504,16 +516,21 @@ function TileTitleArt({
   );
 }
 
-function BadgePill({ text, variant }: { text: string; variant: "red" | "white" }) {
-  const red = variant === "red";
+function BadgePill({ text, variant }: { text: string; variant: "red" | "white" | "black" }) {
+  const palette = {
+    red: { bg: tokens.color.brand, fg: tokens.color.textPrimary },
+    white: { bg: tokens.color.textPrimary, fg: tokens.color.textInverse },
+    black: { bg: "#0A0A0A", fg: tokens.color.textPrimary },
+  } as const;
+  const { bg, fg } = palette[variant];
   return (
     <Box
       component="span"
       sx={{
         paddingInline: "8px",
         paddingBlock: "2px",
-        backgroundColor: red ? tokens.color.brand : tokens.color.textPrimary,
-        color: red ? tokens.color.textPrimary : tokens.color.textInverse,
+        backgroundColor: bg,
+        color: fg,
         fontSize: 10,
         fontWeight: tokens.type.weight.bold,
         letterSpacing: "0.02em",
@@ -585,6 +602,12 @@ function TileInfoPanel({ expansion }: { expansion: TileExpansion }) {
         )}
         {expansion.format && <MetaChip>{expansion.format}</MetaChip>}
       </Box>
+
+      {expansion.description && (
+        <Typography sx={{ fontSize: 12, color: tokens.color.textPrimary, lineHeight: 1.45 }}>
+          {expansion.description}
+        </Typography>
+      )}
 
       {expansion.moodTags && expansion.moodTags.length > 0 && (
         <Typography sx={{ fontSize: 11, color: tokens.color.textPrimary, lineHeight: 1.4 }}>

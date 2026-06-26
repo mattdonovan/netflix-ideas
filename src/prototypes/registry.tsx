@@ -7,7 +7,7 @@ import type { ComponentType } from "react";
  *
  * Anything created via `npm run build-idea` lands here. The picker on the
  * home page iterates this list to render extra tiles below the hand-coded
- * ones (Channels, Idea Hopper, Matt), and the router auto-registers a
+ * ones (Discovery, Idea Hopper, Matt), and the router auto-registers a
  * route at `/<slug>` for each entry.
  *
  * The first three top-level tiles on the picker remain hand-coded in

@@ -43,7 +43,7 @@ export type Experiment = {
 export const experiments: Experiment[] = [
   {
     id: "channels-main",
-    name: "Channels — canonical",
+    name: "Discovery — canonical",
     description: "The current main prototype. Use as the baseline for any side-by-side comparison.",
     tag: "baseline",
     validation: "validated",
@@ -53,7 +53,7 @@ export const experiments: Experiment[] = [
   // registry pattern is visible and the compare view has something to render.
   {
     id: "channels-prompt-top",
-    name: "Channels — prompt at top",
+    name: "Discovery — prompt at top",
     description: "Variant where the prompt panel slides down from the top of the screen instead of overlaying center. Tests whether top-anchored prompts feel less interruptive on a focused row.",
     tag: "layout",
     validation: "draft",

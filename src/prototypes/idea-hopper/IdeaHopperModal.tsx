@@ -5,45 +5,85 @@ import hopperUrl from "@/assets/hopper.png";
 import { tokens } from "@/theme/tokens";
 
 /**
- * Idea Hopper — a parking-lot modal that surfaces prototype concepts that
- * didn't make the cut for the build. Same overlay/centered-Box pattern as
- * DetailModal and SwitchChannelsModal so the modal language stays consistent.
- *
- * The ideas list is editorial, not generated. Edit IDEAS to add/remove.
+ * Idea Hopper — a roadmap-style modal for the Control prototype: what's shipped,
+ * what's parked, and what's next. Styled like the show/movie detail modals with
+ * a full-width image hero. The list is editorial — edit IDEAS to add/remove.
  */
+
+type Status = "Built" | "Next" | "Parked";
 
 type Idea = {
   id: string;
   tag: string;
   title: string;
+  status: Status;
   description?: string;
+};
+
+const STATUS_COLOR: Record<Status, string> = {
+  Built: "#46D369",
+  Next: "#3D6FFF",
+  Parked: "#E5A23A",
 };
 
 const IDEAS: Idea[] = [
   {
-    id: "ai-recs",
-    tag: "Discovery",
-    title: "Actual AI recommendations",
+    id: "control",
+    tag: "Control",
+    title: "Tune your channels",
+    status: "Built",
     description:
-      "A space to dig into how Netflix's recommendation engine actually works \u2014 and to think through the possibilities once AI is doing the curating, not just the ranking.",
+      "The core of this build: describe what you want and the row retunes to a real catalog mix of movies, shows, and games, chosen in the moment.",
+  },
+  {
+    id: "partners",
+    tag: "Partnerships",
+    title: "Partner-enabled discovery",
+    status: "Built",
+    description:
+      "Control is presented by Samsung and unlocked through a partner sign-in — a sketch of how device makers and carriers could light up premium discovery for their members.",
+  },
+  {
+    id: "games",
+    tag: "Games",
+    title: "Games in the mix",
+    status: "Built",
+    description:
+      "Games sit in the same mix as movies and shows, badged by type, so a single tuned row can blend all three.",
+  },
+  {
+    id: "levers",
+    tag: "Control",
+    title: "More discovery levers",
+    status: "Next",
+    description:
+      "Playful, engaging ways to steer the mix beyond a text box — moods, dials, mash-ups, surprise-me. Make tuning feel like play.",
+  },
+  {
+    id: "overview-video",
+    tag: "Storytelling",
+    title: "Overview video",
+    status: "Built",
+    description:
+      "A short walkthrough behind the Watch Overview button, explaining the idea in motion.",
   },
   {
     id: "invite",
     tag: "Sharing",
     title: "Invite",
+    status: "Parked",
     description:
-      "While watching, hit Share to spend one of your monthly invites. A QR code opens your phone; you text a friend a link that unlocks the first few episodes (or the full movie) free, with a one-time code. When they sign up you can keep sending picks from your history into a \u201cMatt\u2019s Recs for You\u201d row in their app.",
+      "While watching, hit Share to spend one of your monthly invites. A QR code opens your phone; you text a friend a link that unlocks the first few episodes (or the full movie) free. When they sign up, your picks flow into a “Matt’s recs for you” row in their app.",
   },
   {
     id: "netflix-independent",
-    tag: "Editorial",
-    title: "Netflix Independant",
+    tag: "Creators",
+    title: "Netflix Independent",
+    status: "Parked",
     description:
-      "A suite of tools for independent creators to run their productions more efficiently \u2014 from pre-production through distribution.",
+      "A suite of tools for independent creators to run their productions more efficiently — from pre-production through distribution.",
   },
 ];
-
-const NOT_BAKED_COLOR = "#E5A23A";
 
 export function IdeaHopperModal({
   open,
@@ -102,13 +142,12 @@ export function IdeaHopperModal({
           boxShadow: tokens.shadow.lg,
         }}
       >
-        <Header onClose={onClose} />
+        <Hero onClose={onClose} />
 
         <Box
           sx={{
             display: "flex",
             flexDirection: "column",
-            gap: `${tokens.space.sm}px`,
             paddingInline: { xs: `${tokens.space.lg}px`, md: `${tokens.space.xl}px` },
             paddingBlock: `${tokens.space.lg}px`,
           }}
@@ -124,19 +163,31 @@ export function IdeaHopperModal({
   );
 }
 
-function Header({ onClose }: { onClose: () => void }) {
+/** Image hero, mirroring the show/movie detail modals. */
+function Hero({ onClose }: { onClose: () => void }) {
   return (
     <Box
       sx={{
         position: "relative",
-        display: "flex",
-        gap: `${tokens.space.lg}px`,
-        alignItems: "center",
-        paddingInline: { xs: `${tokens.space.lg}px`, md: `${tokens.space.xl}px` },
-        paddingTop: { xs: `${tokens.space.xl}px`, md: `${tokens.space["2xl"]}px` },
-        paddingBottom: `${tokens.space.lg}px`,
+        width: "100%",
+        aspectRatio: "760 / 300",
+        backgroundColor: tokens.color.surfaceMid,
+        backgroundImage: `url("${hopperUrl}")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center 22%",
       }}
     >
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          background: `
+            linear-gradient(180deg, rgba(20,20,20,0) 30%, rgba(20,20,20,0.6) 72%, ${tokens.color.surfaceLow} 100%),
+            linear-gradient(90deg, rgba(20,20,20,0.7) 0%, rgba(20,20,20,0.15) 55%, rgba(20,20,20,0) 75%)
+          `,
+        }}
+      />
+
       <IconButton
         aria-label="Close"
         onClick={onClose}
@@ -156,46 +207,38 @@ function Header({ onClose }: { onClose: () => void }) {
       </IconButton>
 
       <Box
-        component="img"
-        src={hopperUrl}
-        alt="Hopper"
         sx={{
-          width: 88,
-          height: 88,
-          borderRadius: `${tokens.radius.sm}px`,
-          objectFit: "cover",
-          objectPosition: "center 15%",
-          flexShrink: 0,
+          position: "absolute",
+          bottom: tokens.space.lg,
+          left: { xs: tokens.space.lg, md: tokens.space.xl },
+          right: { xs: tokens.space.lg, md: tokens.space.xl },
         }}
-      />
-
-      <Box sx={{ minWidth: 0 }}>
+      >
         <Typography
           sx={{
             fontSize: tokens.type.scale.micro.size,
             color: tokens.color.accent,
             letterSpacing: tokens.type.scale.micro.letterSpacing,
-            textTransform: "uppercase",
             fontWeight: tokens.type.weight.semibold,
             marginBottom: "6px",
           }}
         >
-          Idea Hopper
+          Control · roadmap
         </Typography>
         <Typography
           sx={{
-            fontSize: { xs: 26, md: 32 },
-            lineHeight: 1.1,
-            letterSpacing: "-0.015em",
+            fontSize: { xs: 28, md: 36 },
+            lineHeight: 1.05,
+            letterSpacing: "-0.02em",
             fontWeight: tokens.type.weight.bold,
+            textShadow: "0 4px 24px rgba(0,0,0,0.5)",
           }}
         >
-          The ones that got away
+          Idea Hopper
         </Typography>
-        <Typography sx={{ fontSize: 13, color: tokens.color.textSecondary, marginTop: "6px", lineHeight: 1.4 }}>
-          Other prototypes I thought about but didn't build for this round. Listed here so they don't get lost.
+        <Typography sx={{ fontSize: 14, color: tokens.color.textSecondary, marginTop: "6px", lineHeight: 1.4 }}>
+          What's shipped, what's parked, and what's next.
         </Typography>
-
       </Box>
     </Box>
   );
@@ -206,21 +249,20 @@ function IdeaRow({ idea }: { idea: Idea }) {
     <Box
       sx={{
         display: "grid",
-        gridTemplateColumns: "100px 1fr auto",
+        gridTemplateColumns: "110px 1fr auto",
         gap: `${tokens.space.md}px`,
-        alignItems: "center",
-        paddingBlock: `${tokens.space.sm}px`,
+        alignItems: "start",
+        paddingBlock: `${tokens.space.md}px`,
         borderBottom: `1px solid ${tokens.color.border}`,
         "&:last-child": { borderBottom: 0 },
       }}
     >
       <Typography
         sx={{
-          fontSize: tokens.type.scale.micro.size,
+          fontSize: 12,
           color: tokens.color.textTertiary,
-          letterSpacing: tokens.type.scale.micro.letterSpacing,
-          textTransform: "uppercase",
           fontWeight: tokens.type.weight.semibold,
+          marginTop: "2px",
         }}
       >
         {idea.tag}
@@ -239,25 +281,26 @@ function IdeaRow({ idea }: { idea: Idea }) {
 
       <Box
         sx={{
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: tokens.type.weight.semibold,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          paddingInline: "8px",
+          paddingInline: "9px",
           paddingBlock: "3px",
           borderRadius: 4,
-          border: `1px solid ${NOT_BAKED_COLOR}`,
-          color: NOT_BAKED_COLOR,
+          border: `1px solid ${STATUS_COLOR[idea.status]}`,
+          color: STATUS_COLOR[idea.status],
           whiteSpace: "nowrap",
+          marginTop: "2px",
         }}
       >
-        Not Baked
+        {idea.status}
       </Box>
     </Box>
   );
 }
 
 function Footer() {
+  const built = IDEAS.filter((i) => i.status === "Built").length;
+  const next = IDEAS.filter((i) => i.status === "Next").length;
   return (
     <Box
       sx={{
@@ -274,7 +317,7 @@ function Footer() {
       <Typography sx={{ fontSize: 12, color: tokens.color.textSecondary }}>close</Typography>
       <Box sx={{ flex: 1 }} />
       <Typography sx={{ fontSize: 12, color: tokens.color.textTertiary }}>
-        {IDEAS.length} ideas in the hopper
+        {built} shipped · {next} next · {IDEAS.length} in the hopper
       </Typography>
     </Box>
   );

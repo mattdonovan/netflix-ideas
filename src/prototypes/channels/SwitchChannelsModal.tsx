@@ -1,129 +1,86 @@
-import { Box, Typography, IconButton } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
+import { Box, Typography, IconButton, CircularProgress } from "@mui/material";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import MicNoneIcon from "@mui/icons-material/MicNone";
-import daxMonicaUrl from "@/assets/dax-monica.png";
-import upsideDownVideoUrl from "@/assets/upside-down.mp4";
-import yourFriendsUrl from "@/assets/your-friends.jpg";
-import learnSomethingUrl from "@/assets/learn-something.jpg";
-import unityUrl from "@/assets/unity.jpg";
-import leoSeasonUrl from "@/assets/leo-season.png";
+import CheckIcon from "@mui/icons-material/Check";
 import { tokens } from "@/theme/tokens";
+import { SamsungWordmark, SAMSUNG_BLUE } from "@/primitives/SamsungWordmark";
+import { ControlWordmark } from "@/primitives/ControlWordmark";
+import { detectSystem } from "@/lib/system";
+import { ChannelBarsIcon } from "./Channels";
 
 /**
- * Switch Channels modal — peer of DetailModal but inverts the intent:
- * instead of describing a single title, this modal lets the user replace a
- * row of recommendations with a different curatorial lens. The headline
- * interaction is the prompt input; curated channels below act as shortcuts.
+ * Tune Channels modal — peer of DetailModal but inverts the intent: instead of
+ * describing a single title, this modal retunes a row of recommendations from a
+ * free-text prompt. The whole interaction is the AI input; Claude then selects
+ * a matching set of real catalog titles to fill the row.
  */
 
-export type SwitchChannelOption = {
-  id: string;
-  title: string;
-  description: string;
-  accent: [string, string];
-  imageUrl?: string;
-  /** Degrees of rotation to apply to the imageUrl (used for upside-down). */
-  imageRotate?: number;
-  /** Video that fills the card. Frozen on first frame until hover; plays once
-   *  on hover; resets when the cursor leaves. Takes precedence over imageUrl. */
-  videoUrl?: string;
-  /** Pill badge in the corner. Can include a leading emoji. */
-  tag?: string;
-  /** Scale applied to the image layer on hover. Default 1.08 (ken-burns zoom);
-   *  set to 1 to disable scaling (e.g. video cards). */
-  imageHoverScale?: number;
-  /** transform-origin for the image layer's hover scale. */
-  imageHoverOrigin?: string;
-  /** ms for the image hover transition. Longer = slower / dreamier. */
-  imageHoverDurationMs?: number;
-};
 
-const POPULAR_CHANNELS: SwitchChannelOption[] = [
+// Quick-pick chips. The chip shows a short label; clicking it fills the input
+// with a fuller prompt that asks for a mix of movies, shows, and games in that
+// theme. The media checkboxes then decide which of those actually come back.
+const PROMPT_SUGGESTIONS: { label: string; prompt: string }[] = [
   {
-    id: "armchairies",
-    title: "Armchairies",
-    description:
-      "Dax & Monica, mystery science theater style with your favorite armchair anonymous guests.",
-    accent: ["#F25862", "#7B2FFF"],
-    imageUrl: daxMonicaUrl,
-    tag: "\uD83C\uDF52 Armchairies",
-    imageHoverDurationMs: 2400,
+    label: "Sci-fi",
+    prompt:
+      "A mix of movies, shows, and games with a sci-fi spirit — futuristic worlds, space, and big speculative ideas.",
   },
   {
-    id: "upside-down",
-    title: "Upside-down",
-    description:
-      "Your personal shadow-lands. Every episode, the opposite of what you \u201cought\u201d to like. We hope you love it.",
-    accent: ["#3D6FFF", "#E83A1A"],
-    videoUrl: upsideDownVideoUrl,
-    tag: "Upside-down",
-    imageHoverScale: 1,
+    label: "Nostalgia",
+    prompt:
+      "A mix of movies, shows, and games that feel nostalgic — throwbacks and comfort picks that take me back.",
   },
   {
-    id: "your-friends",
-    title: "Your friends",
-    description:
-      "Okay, we admit it \u2014 we watch you watch us. You signed the T&C\u2019s, so why not make the most of it? All your best friends\u2019 favorites.",
-    accent: ["#2BB673", "#3D6FFF"],
-    imageUrl: yourFriendsUrl,
-    tag: "Your friends",
+    label: "Big Emotions",
+    prompt:
+      "A mix of movies, shows, and games with big emotions — tearjerkers, heart, and real catharsis.",
   },
   {
-    id: "learn-something",
-    title: "Learn something",
-    description:
-      "Select topics and languages as often as you like. Mix documentaries, foreign favorites, and hosts into your personal infotainment soup. Or maybe salad?",
-    accent: ["#3D6FFF", "#C2185B"],
-    imageUrl: learnSomethingUrl,
-    tag: "Learn something",
-  },
-  {
-    id: "unity",
-    title: "Unity",
-    description:
-      "We could all use a little bit more of that, couldn\u2019t we? This is a channel dedicated to where we overlap. Where we unite.",
-    accent: ["#E5A23A", "#2BB673"],
-    imageUrl: unityUrl,
-    tag: "Unity",
-  },
-  {
-    id: "leo-season",
-    title: "It\u2019s Leo season!",
-    description:
-      "Happy summer all you social butterflies. This channel is dedicated to Leos. Every lead, a Leo, and every Leo a lead. (le sigh)",
-    accent: ["#FFB300", "#E83A1A"],
-    imageUrl: leoSeasonUrl,
-    tag: "It\u2019s Leo season!",
+    label: "Education",
+    prompt:
+      "A mix of movies, shows, and games that teach me something — documentaries, history, science, and curious deep dives.",
   },
 ];
 
-// Short quick-pick chips — each phrase is ≤3 words so the row stays light.
-const PROMPT_SUGGESTIONS = [
-  "Slow-burn sci-fi",
-  "Cozy rewatch",
-  "Make me cry",
-  "Critic favorites",
+// Media-type checkboxes shown in the input. `key` maps to a catalog `kind` so
+// the caller can filter the candidate pool to just the checked types.
+export type MediaKind = "movie" | "tv" | "game";
+type MediaState = Record<MediaKind, boolean>;
+const MEDIA_TOGGLES: { key: MediaKind; label: string }[] = [
+  { key: "movie", label: "Movies" },
+  { key: "tv", label: "Shows" },
+  { key: "game", label: "Games" },
 ];
+const ALL_MEDIA: MediaState = { movie: true, tv: true, game: true };
 
 export function SwitchChannelsModal({
   open,
   channelTitle,
+  authed,
   onClose,
+  onEnable,
+  onDisconnect,
+  onAbout,
   onSubmitPrompt,
-  onPickChannel,
 }: {
   open: boolean;
-  /** The row being replaced — kept for callers but not shown in the header. */
+  /** The row being tuned — kept for callers but not shown in the header. */
   channelTitle?: string;
+  /** Whether the member has enabled Take Control via Samsung. */
+  authed: boolean;
   onClose: () => void;
-  onSubmitPrompt?: (prompt: string) => void;
-  onPickChannel?: (option: SwitchChannelOption) => void;
+  onEnable: () => void;
+  onDisconnect: () => void;
+  onAbout: () => void;
+  onSubmitPrompt?: (prompt: string, kinds: MediaKind[]) => void;
 }) {
   void channelTitle;
 
   const [prompt, setPrompt] = useState("");
+  const [media, setMedia] = useState<MediaState>(ALL_MEDIA);
+  const [phase, setPhase] = useState<"enable" | "checking" | "tune">("enable");
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -143,16 +100,23 @@ export function SwitchChannelsModal({
     };
   }, [open, onClose]);
 
+  // On open: reset the prompt and jump straight to the tune surface if Samsung
+  // is already connected; otherwise start at the enable gate.
   useEffect(() => {
-    if (!open) setPrompt("");
-  }, [open]);
+    if (open) {
+      setPrompt("");
+      setMedia(ALL_MEDIA);
+      setPhase(authed ? "tune" : "enable");
+    }
+  }, [open, authed]);
 
   if (!open) return null;
 
   function submit() {
     const trimmed = prompt.trim();
     if (!trimmed) return;
-    onSubmitPrompt?.(trimmed);
+    const kinds = MEDIA_TOGGLES.filter((t) => media[t.key]).map((t) => t.key);
+    onSubmitPrompt?.(trimmed, kinds);
     onClose();
   }
 
@@ -160,129 +124,268 @@ export function SwitchChannelsModal({
     <Box
       role="dialog"
       aria-modal="true"
-      aria-label="Switch this channel"
-      onClick={onClose}
-      sx={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1300,
-        backgroundColor: "rgba(0,0,0,0.75)",
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "center",
-        overflowY: "auto",
-        paddingBlock: { xs: 0, md: `${tokens.space.xl}px` },
-      }}
+      aria-label="Tune Channels"
+      sx={{ position: "fixed", inset: 0, zIndex: 1300, backgroundColor: tokens.color.base, overflowY: "auto" }}
     >
       <Box
-        onClick={(e) => e.stopPropagation()}
         sx={{
           position: "relative",
+          minHeight: "100dvh",
           width: "100%",
-          maxWidth: 850,
           backgroundColor: tokens.color.surfaceLow,
-          borderRadius: { xs: 0, md: `${tokens.radius.md}px` },
-          overflow: "hidden",
           color: tokens.color.textPrimary,
-          boxShadow: tokens.shadow.lg,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingInline: { xs: `${tokens.space.lg}px`, md: `${tokens.space.xl}px` },
+          paddingBlock: { xs: `${tokens.space.xl}px`, md: `${tokens.space["2xl"]}px` },
         }}
       >
-        <PromptHero
-          prompt={prompt}
-          setPrompt={setPrompt}
-          inputRef={inputRef}
-          onSubmit={submit}
-          onClose={onClose}
-        />
-
-        <PopularChannels
-          onPick={(option) => {
-            onPickChannel?.(option);
-            onClose();
+        <IconButton
+          aria-label="Close"
+          onClick={onClose}
+          sx={{
+            position: "absolute",
+            top: tokens.space.lg,
+            right: tokens.space.lg,
+            width: 40,
+            height: 40,
+            backgroundColor: "rgba(20,20,20,0.7)",
+            color: tokens.color.textPrimary,
+            zIndex: 2,
+            "&:hover": { backgroundColor: tokens.color.base },
           }}
-        />
+        >
+          <CloseIcon sx={{ fontSize: 24 }} />
+        </IconButton>
+
+        {phase === "enable" && <EnableGate onContinue={() => setPhase("checking")} onAbout={onAbout} />}
+        {phase === "checking" && (
+          <CompatibilityCheck
+            onDone={() => {
+              onEnable();
+              setPhase("tune");
+            }}
+          />
+        )}
+        {phase === "tune" && (
+          <TuneView
+            prompt={prompt}
+            setPrompt={setPrompt}
+            media={media}
+            setMedia={setMedia}
+            inputRef={inputRef}
+            onSubmit={submit}
+            onDisconnect={() => {
+              onDisconnect();
+              setPhase("enable");
+            }}
+          />
+        )}
       </Box>
     </Box>
   );
 }
 
-function PromptHero({
-  prompt,
-  setPrompt,
-  inputRef,
-  onSubmit,
-  onClose,
-}: {
-  prompt: string;
-  setPrompt: (v: string) => void;
-  inputRef: React.RefObject<HTMLTextAreaElement>;
-  onSubmit: () => void;
-  onClose: () => void;
-}) {
+/**
+ * Pre-auth gate. Frames Take Control as a Samsung-sponsored perk and explains
+ * the device-vs-browser entitlement before the member signs in with Samsung.
+ */
+function EnableGate({ onContinue, onAbout }: { onContinue: () => void; onAbout: () => void }) {
   return (
     <Box
       sx={{
-        position: "relative",
         width: "100%",
-        backgroundColor: tokens.color.surfaceLow,
-        paddingTop: { xs: `${tokens.space.xl}px`, md: `${tokens.space["2xl"]}px` },
-        paddingBottom: `${tokens.space.lg}px`,
-        paddingInline: { xs: `${tokens.space.lg}px`, md: `${tokens.space.xl}px` },
+        maxWidth: 520,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: `${tokens.space.lg}px`,
+        textAlign: "center",
+        gap: `${tokens.space.md}px`,
       }}
     >
-      <IconButton
-        aria-label="Close"
-        onClick={onClose}
+      <Box sx={{ color: tokens.color.textPrimary, filter: "drop-shadow(0 4px 24px rgba(0,0,0,0.45))" }}>
+        <ChannelBarsIcon size={56} />
+      </Box>
+      <Box sx={{ display: "inline-flex", alignItems: "center", gap: "8px", color: tokens.color.textSecondary, fontSize: 12 }}>
+        Presented by <SamsungWordmark height={12} color={tokens.color.textPrimary} />
+      </Box>
+      <Typography sx={{ fontSize: { xs: 34, sm: 44, md: 52 }, lineHeight: 1.02, fontWeight: 800, letterSpacing: "-0.02em" }}>
+        Tune Channels
+      </Typography>
+      <Typography sx={{ fontSize: { xs: 15, md: 18 }, color: tokens.color.accent, fontWeight: tokens.type.weight.semibold }}>
+        Included with your Samsung TV.
+      </Typography>
+      <Typography sx={{ fontSize: { xs: 14, md: 15 }, color: tokens.color.textSecondary, lineHeight: 1.6, maxWidth: "42ch" }}>
+        Describe what you want to watch and your row retunes to a real mix of movies, shows, and games — chosen for you in the moment.
+      </Typography>
+      <Typography sx={{ fontSize: 13, color: tokens.color.textTertiary, lineHeight: 1.6, maxWidth: "42ch" }}>
+        On your Samsung TV this is built in. In your browser, sign in with Samsung to enable it.
+      </Typography>
+      <Box
+        component="button"
+        type="button"
+        onClick={onContinue}
         sx={{
-          position: "absolute",
-          top: tokens.space.md,
-          right: tokens.space.md,
-          width: 36,
-          height: 36,
-          backgroundColor: "rgba(20,20,20,0.7)",
-          color: tokens.color.textPrimary,
-          zIndex: 2,
-          "&:hover": { backgroundColor: tokens.color.base },
+          marginTop: `${tokens.space.sm}px`,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "10px",
+          height: 48,
+          paddingInline: "24px",
+          backgroundColor: SAMSUNG_BLUE,
+          color: "#FFFFFF",
+          border: 0,
+          borderRadius: `${tokens.radius.sm}px`,
+          fontFamily: "inherit",
+          fontSize: 15,
+          fontWeight: tokens.type.weight.bold,
+          cursor: "pointer",
+          transition: `filter ${tokens.motion.duration.focus}ms`,
+          "&:hover": { filter: "brightness(1.1)" },
         }}
       >
-        <CloseIcon sx={{ fontSize: 22 }} />
-      </IconButton>
-
-      <ChannelsWave />
-
-      <Typography
+        Continue with <SamsungWordmark height={13} color="#FFFFFF" />
+      </Box>
+      <Box
+        component="button"
+        type="button"
+        onClick={onAbout}
         sx={{
-          fontSize: { xs: 30, sm: 36, md: 42 },
-          lineHeight: 1.05,
-          fontWeight: 800,
-          color: tokens.color.textPrimary,
-          letterSpacing: "-0.015em",
-          textAlign: "center",
+          background: "none",
+          border: 0,
+          color: tokens.color.textSecondary,
+          fontFamily: "inherit",
+          fontSize: 13,
+          cursor: "pointer",
+          textDecoration: "underline",
+          textUnderlineOffset: "3px",
+          "&:hover": { color: tokens.color.textPrimary },
         }}
       >
-        Change this channel
+        About this prototype
+      </Box>
+    </Box>
+  );
+}
+
+/**
+ * Device compatibility check — the member-facing echo of partner device
+ * certification. Resolves a checklist of real browser signals one-by-one to
+ * confirm this machine can run the AI, then hands off to the tune surface.
+ */
+function CompatibilityCheck({ onDone }: { onDone: () => void }) {
+  const checks = useMemo(() => detectSystem(), []);
+  const [revealed, setRevealed] = useState(0);
+  const complete = revealed >= checks.length;
+
+  useEffect(() => {
+    if (complete) {
+      const t = setTimeout(onDone, 850);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => setRevealed((r) => r + 1), revealed === 0 ? 450 : 500);
+    return () => clearTimeout(t);
+  }, [revealed, complete, onDone, checks.length]);
+
+  const shown = checks.slice(0, Math.min(revealed + 1, checks.length));
+
+  return (
+    <Box sx={{ width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", alignItems: "center", gap: `${tokens.space.md}px` }}>
+      <Box sx={{ display: "inline-flex", alignItems: "center", gap: "8px", color: tokens.color.textSecondary, fontSize: 12 }}>
+        Presented by <SamsungWordmark height={12} color={tokens.color.textPrimary} />
+      </Box>
+      <Typography sx={{ fontSize: { xs: 24, md: 28 }, fontWeight: 800, letterSpacing: "-0.015em", textAlign: "center" }}>
+        Setting up Tune Channels
+      </Typography>
+      <Typography sx={{ fontSize: 14, color: tokens.color.textSecondary, textAlign: "center" }}>
+        Making sure this device can run it.
+      </Typography>
+
+      <Box sx={{ width: "100%", display: "flex", flexDirection: "column", gap: `${tokens.space.xs}px`, marginTop: `${tokens.space.sm}px` }}>
+        {shown.map((c, i) => {
+          const done = i < revealed;
+          return (
+            <Box
+              key={c.id}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: `${tokens.space.sm}px`,
+                paddingBlock: "9px",
+                paddingInline: `${tokens.space.sm}px`,
+                borderRadius: `${tokens.radius.sm}px`,
+                backgroundColor: tokens.color.surfaceMid,
+              }}
+            >
+              <Box sx={{ width: 20, height: 20, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                {done ? (
+                  <CheckIcon sx={{ fontSize: 18, color: "#46D369" }} />
+                ) : (
+                  <CircularProgress size={14} sx={{ color: tokens.color.textSecondary }} />
+                )}
+              </Box>
+              <Typography sx={{ flex: 1, fontSize: 14, color: tokens.color.textPrimary }}>{c.label}</Typography>
+              <Typography sx={{ fontSize: 13, color: done ? tokens.color.textSecondary : tokens.color.textTertiary }}>
+                {done ? c.value : "Checking…"}
+              </Typography>
+            </Box>
+          );
+        })}
+      </Box>
+
+      {complete && (
+        <Typography sx={{ marginTop: `${tokens.space.sm}px`, fontSize: 15, fontWeight: tokens.type.weight.semibold, color: "#46D369", textAlign: "center" }}>
+          This device can run Tune Channels
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
+/**
+ * The enabled tune surface — the original AI input, now living behind the
+ * Samsung gate with a quiet "Enabled by Samsung · Disconnect" footer.
+ */
+function TuneView({
+  prompt,
+  setPrompt,
+  media,
+  setMedia,
+  inputRef,
+  onSubmit,
+  onDisconnect,
+}: {
+  prompt: string;
+  setPrompt: (v: string) => void;
+  media: MediaState;
+  setMedia: React.Dispatch<React.SetStateAction<MediaState>>;
+  inputRef: React.RefObject<HTMLTextAreaElement>;
+  onSubmit: () => void;
+  onDisconnect: () => void;
+}) {
+  return (
+    <Box sx={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: `${tokens.space.lg}px` }}>
+      <Box sx={{ color: tokens.color.textPrimary, filter: "drop-shadow(0 4px 24px rgba(0,0,0,0.45))" }}>
+        <ChannelBarsIcon size={56} />
+      </Box>
+
+      <Typography sx={{ fontSize: { xs: 30, sm: 36, md: 42 }, lineHeight: 1.05, fontWeight: 800, letterSpacing: "-0.015em", textAlign: "center" }}>
+        Tune Channels
       </Typography>
 
       <Box sx={{ width: "100%", maxWidth: 560, display: "flex", flexDirection: "column", gap: `${tokens.space.sm}px` }}>
-        <PromptInput
-          value={prompt}
-          onChange={setPrompt}
-          inputRef={inputRef}
-          onSubmit={onSubmit}
-        />
+        <PromptInput value={prompt} onChange={setPrompt} media={media} setMedia={setMedia} inputRef={inputRef} onSubmit={onSubmit} />
 
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: `${tokens.space.xs}px`, justifyContent: "center" }}>
           {PROMPT_SUGGESTIONS.map((s) => (
             <Box
-              key={s}
+              key={s.label}
               component="button"
               type="button"
               onClick={() => {
-                setPrompt(s);
+                setPrompt(s.prompt);
                 inputRef.current?.focus();
               }}
               sx={{
@@ -305,100 +408,38 @@ function PromptHero({
                 },
               }}
             >
-              {s}
+              {s.label}
             </Box>
           ))}
         </Box>
       </Box>
-    </Box>
-  );
-}
 
-/**
- * Channels Wave — 7-slat 3D wave (per design bundle Channels Animation.html).
- * Each slat is a thin slab; at 90° only the 3px edge faces the camera so the
- * row reads as seven slender vertical lines that swell into colored panels
- * as the wave passes through. Anchored at the midpoint of [75°, 105°].
- */
-function ChannelsWave({
-  slatWidth = 38,
-  slatHeight = 88,
-  slatThickness = 3,
-  spacing = 14,
-  durationS = 2.4,
-  staggerS = 0.22,
-  minAngle = 75,
-  maxAngle = 105,
-}: {
-  slatWidth?: number;
-  slatHeight?: number;
-  slatThickness?: number;
-  spacing?: number;
-  durationS?: number;
-  staggerS?: number;
-  minAngle?: number;
-  maxAngle?: number;
-}) {
-  const N = 7;
-  const anchor = (minAngle + maxAngle) / 2;
-  const baseStep = (anchor - minAngle) / (N - 1);
-  const maxTilt = maxAngle - anchor;
-  const stageW = spacing * (N - 1) + slatWidth;
-  const colors = ["#FF8C00", "#E83A1A", "#FF2D82", "#C2185B", "#7B2FFF", "#3D6FFF", "#3D6FFF"];
-
-  return (
-    <Box
-      aria-hidden
-      sx={{
-        width: `${stageW}px`,
-        height: `${slatHeight}px`,
-        perspective: "1400px",
-        perspectiveOrigin: "50% 50%",
-        position: "relative",
-        "@keyframes channelsWaveTilt": {
-          from: { transform: "rotateY(0deg)" },
-          to: { transform: `rotateY(${maxTilt}deg)` },
-        },
-      }}
-    >
-      <Box sx={{ position: "relative", width: "100%", height: "100%", transformStyle: "preserve-3d" }}>
-        {Array.from({ length: N }).map((_, i) => {
-          const stepsFromZero = N - 1 - i;
-          const base = anchor - stepsFromZero * baseStep;
-          const delay = stepsFromZero * staggerS;
-          const color = colors[i];
-          return (
-            <Box
-              key={i}
-              sx={{
-                position: "absolute",
-                top: 0,
-                left: `${i * spacing}px`,
-                width: `${slatWidth}px`,
-                height: `${slatHeight}px`,
-                transformOrigin: "100% 50%",
-                transformStyle: "preserve-3d",
-                transform: `rotateY(${base}deg)`,
-              }}
-            >
-              <Box
-                sx={{
-                  position: "absolute",
-                  inset: 0,
-                  transformOrigin: "100% 50%",
-                  transformStyle: "preserve-3d",
-                  animation: `channelsWaveTilt ${durationS}s cubic-bezier(.5, 0, .5, 1) infinite alternate`,
-                  animationDelay: `${delay}s`,
-                  willChange: "transform",
-                }}
-              >
-                <Box sx={{ position: "absolute", inset: 0, background: color, boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.18)", backfaceVisibility: "hidden", transform: `translateZ(${slatThickness / 2}px)` }} />
-                <Box sx={{ position: "absolute", inset: 0, background: color, boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.18)", backfaceVisibility: "hidden", transform: `translateZ(${-slatThickness / 2}px) rotateY(180deg)` }} />
-                <Box sx={{ position: "absolute", top: 0, bottom: 0, left: `${-slatThickness / 2}px`, width: `${slatThickness}px`, background: color, transform: "rotateY(-90deg)", transformOrigin: "50% 50%", backfaceVisibility: "hidden" }} />
-              </Box>
-            </Box>
-          );
-        })}
+      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "7px" }}>
+        <ControlWordmark height={15} color={tokens.color.textPrimary} />
+        <Box sx={{ display: "inline-flex", alignItems: "center", gap: "8px", color: tokens.color.textSecondary, fontSize: 12 }}>
+          <Box sx={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            Enabled by <SamsungWordmark height={11} color={tokens.color.textPrimary} />
+          </Box>
+          <Box component="span" sx={{ color: tokens.color.textTertiary }}>·</Box>
+          <Box
+            component="button"
+            type="button"
+            onClick={onDisconnect}
+            sx={{
+              background: "none",
+              border: 0,
+              color: tokens.color.textSecondary,
+              fontFamily: "inherit",
+              fontSize: 12,
+              cursor: "pointer",
+              textDecoration: "underline",
+              textUnderlineOffset: "3px",
+              "&:hover": { color: tokens.color.textPrimary },
+            }}
+          >
+            Disconnect
+          </Box>
+        </Box>
       </Box>
     </Box>
   );
@@ -407,16 +448,30 @@ function ChannelsWave({
 function PromptInput({
   value,
   onChange,
+  media,
+  setMedia,
   inputRef,
   onSubmit,
 }: {
   value: string;
   onChange: (v: string) => void;
+  media: MediaState;
+  setMedia: React.Dispatch<React.SetStateAction<MediaState>>;
   inputRef: React.RefObject<HTMLTextAreaElement>;
   onSubmit: () => void;
 }) {
   const [focused, setFocused] = useState(false);
   const expanded = focused || value.length > 0;
+
+  // Toggle a media type, but never let the user uncheck the last one — an empty
+  // set would have nothing to tune from.
+  function toggleMedia(key: MediaKind) {
+    setMedia((m) => {
+      const next = { ...m, [key]: !m[key] };
+      if (!next.movie && !next.tv && !next.game) return m;
+      return next;
+    });
+  }
 
   const restHeight = 52;
   const expandedHeight = 108;
@@ -495,6 +550,73 @@ function PromptInput({
         }}
       />
 
+      {/* Media checkboxes — bottom-left, only while expanded. mouseDown is
+          prevented so toggling doesn't blur the textarea (which would collapse
+          the input when it's empty). */}
+      <Box
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={(e) => e.stopPropagation()}
+        sx={{
+          position: "absolute",
+          left: `${tokens.space.md}px`,
+          bottom: 12,
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          opacity: expanded ? 1 : 0,
+          pointerEvents: expanded ? "auto" : "none",
+          transition: `opacity ${dur}ms ${ease}`,
+        }}
+      >
+        {MEDIA_TOGGLES.map((t) => {
+          const checked = media[t.key];
+          return (
+            <Box
+              key={t.key}
+              component="button"
+              type="button"
+              role="checkbox"
+              aria-checked={checked}
+              onClick={() => toggleMedia(t.key)}
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                height: 26,
+                paddingInline: "8px",
+                borderRadius: `${tokens.radius.pill}px`,
+                border: `1px solid ${checked ? tokens.color.accent : tokens.color.borderStrong}`,
+                backgroundColor: checked ? "rgba(228,64,76,0.16)" : "transparent",
+                color: checked ? tokens.color.textPrimary : tokens.color.textSecondary,
+                fontFamily: "inherit",
+                fontSize: 12,
+                fontWeight: tokens.type.weight.medium,
+                cursor: "pointer",
+                transition: `background-color ${dur}ms ${ease}, border-color ${dur}ms ${ease}, color ${dur}ms ${ease}`,
+                "&:hover": { borderColor: checked ? tokens.color.accent : tokens.color.textSecondary },
+              }}
+            >
+              <Box
+                sx={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: "3px",
+                  display: "grid",
+                  placeItems: "center",
+                  border: `1.5px solid ${checked ? tokens.color.accent : tokens.color.textSecondary}`,
+                  backgroundColor: checked ? tokens.color.accent : "transparent",
+                  color: tokens.color.textPrimary,
+                  flexShrink: 0,
+                }}
+              >
+                {checked && <CheckIcon sx={{ fontSize: 11 }} />}
+              </Box>
+              {t.label}
+            </Box>
+          );
+        })}
+      </Box>
+
       <IconButton
         aria-label="Dictate"
         onClick={(e) => {
@@ -548,245 +670,6 @@ function PromptInput({
       >
         <ArrowUpwardIcon sx={{ fontSize: 20 }} />
       </IconButton>
-    </Box>
-  );
-}
-
-function PopularChannels({ onPick }: { onPick: (option: SwitchChannelOption) => void }) {
-  return (
-    <Box
-      sx={{
-        paddingInline: { xs: `${tokens.space.lg}px`, md: `${tokens.space.xl}px` },
-        paddingBlock: `${tokens.space.lg}px`,
-      }}
-    >
-      <Typography
-        sx={{
-          fontSize: 22,
-          fontWeight: tokens.type.weight.semibold,
-          color: tokens.color.textPrimary,
-          letterSpacing: "-0.005em",
-          textAlign: "center",
-          marginBottom: `${tokens.space.md}px`,
-        }}
-      >
-        Or try some of these:
-      </Typography>
-
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, 1fr)" },
-          gap: `${tokens.space.sm}px`,
-        }}
-      >
-        {POPULAR_CHANNELS.map((option) => (
-          <ChannelOptionCard key={option.id} option={option} onPick={onPick} />
-        ))}
-      </Box>
-    </Box>
-  );
-}
-
-/**
- * Channel option card.
- *
- * Geometry is fixed — every card is aspectRatio 4/5 regardless of content.
- *
- *   At rest  → only the image + the corner badge are visible. No text, no
- *              bottom gradient. The card reads as a clean tile.
- *   On hover → image ken-burns zooms; a subtle bottom gradient fades in;
- *              the description dissolves up from the bottom edge.
- */
-function ChannelOptionCard({
-  option,
-  onPick,
-}: {
-  option: SwitchChannelOption;
-  onPick: (option: SwitchChannelOption) => void;
-}) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  const dur = tokens.motion.duration.focus;
-  const ease = tokens.motion.easing.focus;
-
-  const hoverScale = option.imageHoverScale ?? 1.08;
-  const hoverOrigin = option.imageHoverOrigin ?? "center";
-  const imageDurMs = option.imageHoverDurationMs ?? 360;
-
-  function handleEnter() {
-    const v = videoRef.current;
-    if (!v) return;
-    v.currentTime = 0;
-    v.play().catch(() => {});
-  }
-
-  function handleLeave() {
-    const v = videoRef.current;
-    if (!v) return;
-    v.pause();
-    v.currentTime = 0;
-  }
-
-  return (
-    <Box
-      component="button"
-      type="button"
-      onClick={() => onPick(option)}
-      onMouseEnter={option.videoUrl ? handleEnter : undefined}
-      onMouseLeave={option.videoUrl ? handleLeave : undefined}
-      className="channel-card"
-      sx={{
-        position: "relative",
-        width: "100%",
-        aspectRatio: "4 / 5",
-        // Solid base color — visible around the shrunken image on hover, and
-        // becomes the content panel's bg when the panel goes opaque.
-        backgroundColor: tokens.color.surfaceMid,
-        border: `1px solid ${tokens.color.border}`,
-        borderRadius: `${tokens.radius.sm}px`,
-        overflow: "hidden",
-        cursor: "pointer",
-        font: "inherit",
-        color: "inherit",
-        padding: 0,
-        textAlign: "left",
-        transition: `border-color ${dur}ms ${ease}`,
-        "&:hover": { borderColor: tokens.color.borderStrong },
-        "&:hover .card-image-layer": {
-          transform: `scale(${hoverScale})`,
-        },
-        "&:hover .card-content-panel": {
-          opacity: 1,
-        },
-        "&:hover .card-extra": {
-          opacity: 1,
-          transform: "translateY(0)",
-        },
-      }}
-    >
-      {/* Layer 1 — image / gradient. Scales toward the top on hover. */}
-      <Box
-        className="card-image-layer"
-        sx={{
-          position: "absolute",
-          inset: 0,
-          background: `linear-gradient(135deg, ${option.accent[0]} 0%, ${option.accent[1]} 100%)`,
-          transformOrigin: hoverOrigin,
-          transform: "scale(1)",
-          transition: `transform ${imageDurMs}ms ${ease}`,
-        }}
-      >
-        {option.videoUrl ? (
-          <Box
-            component="video"
-            ref={videoRef}
-            src={option.videoUrl}
-            // muted + playsInline are required for programmatic play() to
-            // succeed across browsers (esp. Safari/iOS) without a user
-            // gesture on the video element itself.
-            muted
-            playsInline
-            preload="auto"
-            sx={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-            }}
-          />
-        ) : option.imageUrl ? (
-          <Box
-            component="img"
-            src={option.imageUrl}
-            alt=""
-            sx={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center top",
-              transform: option.imageRotate ? `rotate(${option.imageRotate}deg)` : "none",
-            }}
-          />
-        ) : null}
-      </Box>
-
-      {/* Tag — sits above the image layer at the card root so it stays a
-          consistent size when the image shrinks on hover. */}
-      {option.tag && (
-        <Box
-          sx={{
-            position: "absolute",
-            top: 12,
-            left: 12,
-            zIndex: 2,
-            fontSize: 13,
-            fontWeight: tokens.type.weight.semibold,
-            letterSpacing: "-0.005em",
-            paddingInline: "10px",
-            paddingBlock: "5px",
-            borderRadius: `${tokens.radius.pill}px`,
-            backgroundColor: "rgba(20,20,20,0.78)",
-            color: tokens.color.textPrimary,
-            backdropFilter: "blur(8px)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {option.tag}
-        </Box>
-      )}
-
-      {/* Layer 2 — subtle bottom gradient + description, both fade in on hover.
-          No title at any state: the badge identifies the channel. */}
-      <Box
-        className="card-content-panel"
-        sx={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          top: "55%",
-          opacity: 0,
-          pointerEvents: "none",
-          backgroundImage:
-            "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.88) 100%)",
-          transition: `opacity ${dur}ms ${ease}`,
-        }}
-      />
-
-      <Box
-        className="card-extra"
-        sx={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          paddingInline: `${tokens.space.sm}px`,
-          paddingBottom: `${tokens.space.sm}px`,
-          paddingTop: `${tokens.space.sm}px`,
-          opacity: 0,
-          transform: "translateY(6px)",
-          transition: `opacity ${dur}ms ${ease} 60ms, transform ${dur}ms ${ease} 60ms`,
-          zIndex: 1,
-        }}
-      >
-        <Typography
-          sx={{
-            fontSize: 12,
-            color: tokens.color.textPrimary,
-            lineHeight: 1.4,
-            display: "-webkit-box",
-            WebkitLineClamp: 5,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          {option.description}
-        </Typography>
-      </Box>
     </Box>
   );
 }

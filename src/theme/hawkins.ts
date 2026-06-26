@@ -148,7 +148,7 @@ const baseTheme: ThemeOptions = {
         },
         // `contained` = the off-white "Open / More info"-style primary action.
         // For the Netflix-red brand button (Sign In on the Figma auth screen
-        // and the Home hero's "Open Channels"), use the `brand` color prop —
+        // and the Home hero's "Open Discovery"), use the `brand` color prop —
         // see the variants block below.
         contained: {
           backgroundColor: t.color.textPrimary,

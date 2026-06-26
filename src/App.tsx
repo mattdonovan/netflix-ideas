@@ -23,7 +23,9 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/channels" element={<Channels />} />
+          <Route path="/discovery" element={<Channels />} />
+          {/* Back-compat: the prototype was renamed Channels → Discovery. */}
+          <Route path="/channels" element={<Navigate to="/discovery" replace />} />
           <Route path="/experiments" element={<ExperimentsRouter />} />
           <Route path="/experiments/:id" element={<SingleExperimentRoute />} />
           {registeredPrototypes.map((p) => (
@@ -225,9 +227,9 @@ function TileShell({
 
 function ChannelsTile() {
   return (
-    <Tooltip title="Open Channels" placement="bottom" arrow>
+    <Tooltip title="Open Control" placement="bottom" arrow>
       <Box sx={{ display: "inline-block" }}>
-        <TileShell label="Channels" asLink="/channels">
+        <TileShell label="Control" asLink="/discovery">
           <Box
             sx={{
               position: "absolute",

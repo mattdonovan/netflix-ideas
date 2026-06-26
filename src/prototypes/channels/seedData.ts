@@ -34,7 +34,7 @@ const baseChannels: Channel[] = [
   {
     id: "your-next-watch",
     category: {
-      title: "Your Next Watch",
+      title: "New on Netflix",
       tags: ["personalized", "recommendations"],
       tone: ["intimate", "considered", "varied"],
       moodColor: "#D9A45F",
@@ -54,7 +54,7 @@ const baseChannels: Channel[] = [
   {
     id: "new-on-netflix",
     category: {
-      title: "New on Netflix",
+      title: "Your Next Watch",
       tags: ["new", "recent"],
       tone: ["fresh", "current", "varied"],
       moodColor: "#E50914",

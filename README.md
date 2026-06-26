@@ -8,7 +8,7 @@ I built this in a few evenings to practice two things. One was a review habit. A
 
 ## What's in here
 
-**Channels** is the part I actually built. The idea is that you write your own rows. You type "shows my dad would secretly love" and the row reshapes itself. The interesting part isn't the first iteration. It's the third. It's the user who said "more soul" and got the same thing back. That loop is where the actual design problem lives.
+**Discovery** is the part I actually built — a home for web-based ideas about the hardest part of Netflix, deciding what to watch. The first one is live: you write your own rows. You type "shows my dad would secretly love" and the row reshapes itself. The interesting part isn't the first iteration. It's the third. It's the user who said "more soul" and got the same thing back. That loop is where the actual design problem lives. (Channels is the name of that first idea; Discovery is the surface it lives on.)
 
 **Idea Hopper** is the parking lot for everything else. Invite, AI recommendations done properly, a tools suite for independent productions. Those didn't get built this round. They're listed so they don't get lost.
 
@@ -16,8 +16,9 @@ The surface is a desktop browser pretending to be a TV. The catalog is a small e
 
 ## Why review lenses
 
-Every visual pass gets run through [`context/review-lenses.md`](context/review-lenses.md). It's grown into a real system over the iterations — three tiers now, not one roster.
+Every visual pass gets run through [`context/review-lenses.md`](context/review-lenses.md). It's grown into a real system over the iterations — three tiers for reviewing existing work, plus a separate conception lens that fires *before* any of them when a new feature is being shaped.
 
+- **Conception lens — Bob Moesta.** Fires when shaping a new prototype or feature, not on every visual pass. Anchored on Jobs to be Done and the Forces of Progress. Examines the premise; the tier lenses examine the artifact. If the premise is wrong, polishing the artifact is wasted motion.
 - **Tier 1 — Anchor lenses, every pass.** Five designers (Frank Chimero, Josh Mateo, Niyati Gupta, Diana Lu, Matt D. Smith) and three stakeholder personas (Discovery PM, Growth PM, TV Engineering Lead). Each anchor must Carry, Sit out, or Graduate — no echoes.
 - **Tier 2 — Guest lenses, on rotation.** Don Norman, Rauno Freiberg, Paco Coursey, Emil Kowalski, Tina Roth Eisenberg, Paul Rand. Each is here to find a specific failure mode; you pick the one whose failure mode is most likely present in the work that shipped.
 - **Tier 3 — Methodology lenses, weekly or when relevant.** Decision Lab biases index, IDEO.org equity framing, Warm Design accessibility, Netflix Tech Blog evidence rigor.
@@ -48,7 +49,7 @@ This whole thing got off the ground because of [Ivanna Jeraskina's Netflix Desig
 
 ## Try your own idea
 
-This thing is a sandbox. Clone it. Rip out Channels. Drop in your own row, your own loop, your own provocation. The primitives (Row, TopTenRow, Tile, the focus engine) are reusable. The Hawkins-flavored tokens give you a credible-looking starting surface in about ten minutes. If you build something fun on top of it, I'd love to see it.
+This thing is a sandbox. Clone it. Rip out Discovery. Drop in your own row, your own loop, your own provocation. The primitives (Row, TopTenRow, Tile, the focus engine) are reusable. The Hawkins-flavored tokens give you a credible-looking starting surface in about ten minutes. If you build something fun on top of it, I'd love to see it.
 
 ```bash
 git clone https://github.com/mattdonovan/netflix-ideas
@@ -87,7 +88,7 @@ A few notes that aren't obvious from the source:
 - **`npm run build-idea -- --name=<slug> [--title=<string>] [--glyph=<char>] [--web-ui | --tv]`** scaffolds a new prototype into `src/prototypes/<slug>/`, registers it on the picker, and auto-routes `/`<slug>`. Two templates: `--web-ui` (plain MUI on Hawkins tokens — the default) and `--tv` (wrapped in TvFrame with safe-zone). Add more under `scripts/templates/`.
 - **Experiments registry.** Variants of prototypes live in [`src/experiments/registry.tsx`](src/experiments/registry.tsx) and render at `/experiments`. Each carries a validation state (`draft` / `validated` / `deprecated`) — borrowed directly from a Hawkins post-mortem on shipping components broadly before product-context validation.
 - **API keys:** Railway service variables in production, local `.env` in development. Never commit a key.
-- **Routes:** `/` (picker), `/channels` (the built prototype), `/experiments`, `/experiments/:id`, `/experiments?compare=A,B`.
+- **Routes:** `/` (picker), `/discovery` (the built prototype; `/channels` redirects here), `/experiments`, `/experiments/:id`, `/experiments?compare=A,B`.
 
 ## Repo layout
 
@@ -105,7 +106,7 @@ scripts/            Playwright snap + lens-promotion check scripts
 src/
   theme/            Hawkins-flavored MUI tokens
   primitives/       Row, TopTenRow, Tile, focus engine, brand glyphs
-  prototypes/       Channels, Idea Hopper
+  prototypes/       Discovery (channels/), Idea Hopper
   experiments/      Side-by-side variants registry
   lib/              Catalog, Claude client, focus engine
 ```
