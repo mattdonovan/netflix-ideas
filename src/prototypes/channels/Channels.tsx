@@ -1468,30 +1468,19 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           overflow: "hidden",
         }}
       >
-        {/* Hero — mesh backdrop + Control logo, mirroring the title modals. */}
-        <Box sx={{ position: "relative", width: "100%", aspectRatio: "620 / 300", background: CONTROL_MESH, overflow: "hidden" }}>
+        {/* Lead — the overview walkthrough video. */}
+        <Box sx={{ position: "relative" }}>
           <Box
+            component="iframe"
+            src="https://www.loom.com/embed/7f790ed025b94629ab89666cbc1dbe42"
+            title="Control overview"
+            allowFullScreen
             sx={{
-              position: "absolute",
-              top: "50%",
-              right: "-4%",
-              transform: "translateY(-50%)",
-              opacity: 0.5,
-              color: "#FFFFFF",
-              display: { xs: "none", sm: "block" },
-              pointerEvents: "none",
-            }}
-          >
-            <ChannelBarsIcon size={200} />
-          </Box>
-          <Box
-            sx={{
-              position: "absolute",
-              inset: 0,
-              background: `
-                linear-gradient(180deg, rgba(20,20,20,0) 38%, rgba(20,20,20,0.5) 72%, ${tokens.color.surfaceLow} 100%),
-                linear-gradient(90deg, rgba(20,20,20,0.5) 0%, rgba(20,20,20,0) 62%)
-              `,
+              width: "100%",
+              aspectRatio: "4 / 3",
+              border: 0,
+              display: "block",
+              backgroundColor: tokens.color.base,
             }}
           />
           <IconButton
@@ -1505,26 +1494,12 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
               height: 36,
               backgroundColor: "rgba(20,20,20,0.7)",
               color: tokens.color.textPrimary,
+              zIndex: 2,
               "&:hover": { backgroundColor: tokens.color.base },
             }}
           >
             <CloseIcon sx={{ fontSize: 22 }} />
           </IconButton>
-          <Box
-            sx={{
-              position: "absolute",
-              bottom: tokens.space.lg,
-              left: { xs: tokens.space.lg, md: tokens.space.xl },
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-            }}
-          >
-            <ControlWordmark height="clamp(28px, 6.5vw, 46px)" color="#FFFFFF" />
-            <Box sx={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "rgba(255,255,255,0.82)", fontSize: 12 }}>
-              Presented by <SamsungWordmark height={11} color="#FFFFFF" />
-            </Box>
-          </Box>
         </Box>
 
         {/* Body */}
@@ -1535,23 +1510,6 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
             paddingBottom: `${tokens.space.xl}px`,
           }}
         >
-          {/* Overview walkthrough video. */}
-          <Box
-            component="iframe"
-            src="https://www.loom.com/embed/7f790ed025b94629ab89666cbc1dbe42"
-            title="Control overview"
-            allowFullScreen
-            sx={{
-              width: "100%",
-              aspectRatio: "4 / 3",
-              border: 0,
-              borderRadius: `${tokens.radius.sm}px`,
-              display: "block",
-              backgroundColor: tokens.color.base,
-              marginBottom: `${tokens.space.lg}px`,
-            }}
-          />
-
           <Typography
             sx={{
               fontSize: tokens.type.scale.micro.size,
