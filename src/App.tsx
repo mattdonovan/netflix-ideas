@@ -7,6 +7,7 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { hawkinsTheme } from "@/theme/hawkins";
 import { tokens } from "@/theme/tokens";
 import { Channels, ChannelBarsIcon } from "@/prototypes/channels/Channels";
+import { WatchPage } from "@/prototypes/channels/WatchPage";
 import { IdeaHopperModal } from "@/prototypes/idea-hopper/IdeaHopperModal";
 import { registeredPrototypes } from "@/prototypes/registry";
 import { ExperimentsIndex, ExperimentSingle, ExperimentCompare } from "@/experiments/Experiments";
@@ -24,6 +25,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/discovery" element={<Channels />} />
+          {/* The Loom overview, played on a Netflix-style full-screen player. */}
+          <Route path="/watch" element={<WatchPage />} />
           {/* Back-compat: the prototype was renamed Channels → Discovery. */}
           <Route path="/channels" element={<Navigate to="/discovery" replace />} />
           <Route path="/experiments" element={<ExperimentsRouter />} />
