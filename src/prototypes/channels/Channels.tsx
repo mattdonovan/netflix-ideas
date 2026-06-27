@@ -1,6 +1,6 @@
 import { Box, Typography, IconButton, Button, Tooltip } from "@mui/material";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
@@ -1419,6 +1419,15 @@ function TakeControlTile({ onClick }: { onClick: () => void }) {
  * SwitchChannelsModal — this is where the prototype describes itself.
  */
 function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const navigate = useNavigate();
+
+  // Click the player to watch the overview full-screen on the Netflix-style
+  // /watch page. Close this modal on the way so the player owns the viewport.
+  const openWatch = () => {
+    onClose();
+    navigate("/watch");
+  };
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -1468,24 +1477,78 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           overflow: "hidden",
         }}
       >
-        {/* Lead — the overview walkthrough video. */}
-        <Box sx={{ position: "relative" }}>
+        {/* Lead — the overview walkthrough. The Loom embed shows as the
+            poster (pointer-events disabled); clicking the surface opens the
+            full-screen Netflix-style /watch player. */}
+        <Box
+          role="button"
+          tabIndex={0}
+          aria-label="Watch the overview"
+          onClick={openWatch}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              openWatch();
+            }
+          }}
+          className="about-player"
+          sx={{
+            position: "relative",
+            cursor: "pointer",
+            display: "block",
+            "&:focus-visible": { outline: `2px solid ${tokens.color.focusRing}`, outlineOffset: -2 },
+          }}
+        >
           <Box
             component="iframe"
             src="https://www.loom.com/embed/7f790ed025b94629ab89666cbc1dbe42"
             title="Control overview"
-            allowFullScreen
+            tabIndex={-1}
             sx={{
               width: "100%",
               aspectRatio: "4 / 3",
               border: 0,
               display: "block",
               backgroundColor: tokens.color.base,
+              pointerEvents: "none",
             }}
           />
+          {/* Hover/press affordance — a Netflix-red play button over a scrim. */}
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "rgba(0,0,0,0.28)",
+              opacity: 0,
+              transition: `opacity ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
+              ".about-player:hover &, .about-player:focus-visible &": { opacity: 1 },
+            }}
+          >
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                backgroundColor: tokens.color.brand,
+                display: "grid",
+                placeItems: "center",
+                boxShadow: tokens.shadow.md,
+                transition: `transform ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
+                ".about-player:hover &": { transform: "scale(1.06)" },
+              }}
+            >
+              <PlayArrowIcon sx={{ fontSize: 38, color: "#fff", marginLeft: "2px" }} />
+            </Box>
+          </Box>
           <IconButton
             aria-label="Close"
-            onClick={onClose}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
             sx={{
               position: "absolute",
               top: tokens.space.md,
