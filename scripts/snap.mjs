@@ -20,6 +20,7 @@ const OUT = path.resolve(process.cwd(), "reviews/snaps");
 const ALL_ROUTES = [
   { path: "/", name: "home" },
   { path: "/channels", name: "channels" },
+  { path: "/catch-up", name: "catch-up" },
   { path: "/experiments", name: "experiments" },
 ];
 

@@ -3,46 +3,75 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
-import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import CheckIcon from "@mui/icons-material/Check";
 import ShuffleIcon from "@mui/icons-material/Shuffle";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import GitHubIcon from "@mui/icons-material/GitHub";
-import ScienceIcon from "@mui/icons-material/Science";
-import FacebookIcon from "@mui/icons-material/Facebook";
-import InstagramIcon from "@mui/icons-material/Instagram";
-import TwitterIcon from "@mui/icons-material/Twitter";
-import YouTubeIcon from "@mui/icons-material/YouTube";
-import mattAvatarUrl from "@/assets/matt-avatar.png";
 import CloseIcon from "@mui/icons-material/Close";
 import { tokens } from "@/theme/tokens";
-import { TvFrame, Row, TopTenRow, Tile, NetflixWordmark } from "@/primitives";
+import { TvFrame, Row, TopTenRow, Tile, NetflixWordmark, FocusRow, ReasonBadge } from "@/primitives";
+import type { FocusRowItem, ReasonBadgeSpec } from "@/primitives";
 import { SamsungWordmark } from "@/primitives/SamsungWordmark";
 import { ControlWordmark, CONTROL_LOGO_DATA_URI } from "@/primitives/ControlWordmark";
 import { useRowSizing } from "@/primitives/Row";
 import type { TileBadge } from "@/primitives/Tile";
 import { FocusProvider } from "@/lib/focus";
-import { DetailModal, type DetailModalContent, type DetailModalSuggestion } from "./DetailModal";
+import {
+  TvSurfaceHead,
+  Billboard,
+  BillboardArt,
+  BillboardSkeleton,
+  HeroSkeletonBar,
+  Footer,
+  ProfileMenu,
+  DetailModal,
+  buildRowMeta,
+  buildDetailContent,
+  darken,
+  type DetailModalContent,
+} from "@/surfaces/netflix-tv";
 import { SwitchChannelsModal, type MediaKind } from "./SwitchChannelsModal";
 import { seedChannels, type Channel } from "./seedData";
-import { findInCatalog, catalog, type CatalogEntry } from "@/lib/catalog";
+import { findInCatalog, type CatalogEntry } from "@/lib/catalog";
+import { catalog } from "@/lib/catalog";
 import { tuneChannel, type TuneCandidate } from "@/lib/claude";
+
+/**
+ * Context a channel row contributes to a title's detail view. The surface's
+ * `buildDetailContent` takes loose hints rather than a Channel, so this
+ * adapts one to the other in a single place.
+ */
+function detailHints(channel: Channel) {
+  return {
+    genreHint: channel.category.title.split(/\s/)[0] || "Featured",
+    mood: channel.category.tone,
+    isNew: channel.id === "new-on-netflix",
+  };
+}
 
 /**
  * Top-level Channels screen.
  *
- * Web-first interaction model: mouse hover focuses tiles, click also
- * focuses (Netflix's actual web behavior); keyboard / TV remote are a
- * supported backup. The PromptPanel modal opens only from the row-level
- * AI magic icon or the 'T' shortcut — never from a tile.
+ * Two interaction models live here, selected by `variant`:
+ *
+ *  - "tv" (default) — the 2025 Netflix TV language: centered pill nav, an
+ *    inset billboard, and focus-committed rows where one card expands to
+ *    landscape in place and its metadata renders below the reel. Nothing
+ *    overlays anything.
+ *  - "web" — the netflix.com language this prototype was originally built
+ *    in: left-aligned nav and hover-bloom cards that pop a metadata popover
+ *    on top of their neighbors.
+ *
+ * The web variant is kept so the two can be compared side by side from
+ * /experiments rather than argued about. See src/experiments/registry.tsx.
  */
 
-export function Channels() {
+export type ChannelsVariant = "tv" | "web";
+
+export function Channels({ variant = "tv" }: { variant?: ChannelsVariant } = {}) {
   return (
     <FocusProvider>
       <TvFrame>
-        <ChannelsContent />
+        <ChannelsContent variant={variant} />
       </TvFrame>
     </FocusProvider>
   );
@@ -162,7 +191,7 @@ function resolvePicks(
   return out;
 }
 
-function ChannelsContent() {
+function ChannelsContent({ variant }: { variant: ChannelsVariant }) {
   const [channels] = useState<Channel[]>(seedChannels);
   const [detail, setDetail] = useState<DetailModalContent | null>(null);
   const [switchTarget, setSwitchTarget] = useState<Channel | null>(null);
@@ -285,7 +314,7 @@ function ChannelsContent() {
   } else if (topOverride?.phase === "ready" && topOverride.tiles?.[0]) {
     const ex = topOverride.tiles[0];
     const entry = findInCatalog(ex.title, ex.year);
-    const content = buildDetailContent({ entry, fallbackTitle: ex.title, channel: topRow });
+    const content = buildDetailContent({ entry, fallbackTitle: ex.title, ...detailHints(topRow) });
     heroFeature = {
       phase: "content",
       title: ex.title,
@@ -297,11 +326,19 @@ function ChannelsContent() {
 
   return (
     <>
-      <Hero
-        feature={heroFeature}
-        onTune={() => setSwitchTarget(topRow)}
-        onWatchOverview={() => setAboutOpen(true)}
-      />
+      {variant === "tv" ? (
+        <HeroTv
+          feature={heroFeature}
+          onTune={() => setSwitchTarget(topRow)}
+          onWatchOverview={() => setAboutOpen(true)}
+        />
+      ) : (
+        <Hero
+          feature={heroFeature}
+          onTune={() => setSwitchTarget(topRow)}
+          onWatchOverview={() => setAboutOpen(true)}
+        />
+      )}
 
       <Box
         sx={{
@@ -312,11 +349,17 @@ function ChannelsContent() {
           // and ~32px from the *previous* row's image (paddingBlock=16 +
           // gap=16). Label-to-row is one spacing step closer than row-to-row,
           // signalling that each title belongs to the row beneath it.
-          gap: `${tokens.space.sm}px`,
-          // Pull the row stack up so the first row's title sits over the
-          // bottom of the hero backdrop — matches Netflix's layered handoff
-          // where the title row appears to belong to the hero band.
-          marginTop: { xs: `-${tokens.space.xl}px`, md: `-${tokens.space["2xl"]}px` },
+          // TV rows already carry their own metadata block under the reel, so
+          // they need less inter-row air than the web rows (whose hover-bloom
+          // has to have somewhere to grow into).
+          gap: variant === "tv" ? `${tokens.space.md}px` : `${tokens.space.sm}px`,
+          // Web only: pull the row stack up so the first row's title sits over
+          // the bottom of the full-bleed hero backdrop. The TV billboard is
+          // inset and self-contained, so the rows follow it normally.
+          marginTop:
+            variant === "tv"
+              ? `${tokens.space.md}px`
+              : { xs: `-${tokens.space.xl}px`, md: `-${tokens.space["2xl"]}px` },
           position: "relative",
           zIndex: 1,
         }}
@@ -324,6 +367,7 @@ function ChannelsContent() {
         {channels.map((channel) => (
           <ChannelRow
             key={channel.id}
+            variant={variant}
             channel={channel}
             override={rowOverrides[channel.id]}
             onTileSelect={(content) => setDetail(content)}
@@ -468,231 +512,6 @@ function Header() {
   );
 }
 
-/**
- * Avatar + profile dropdown. Quotes the Netflix avatar-menu position (top-right
- * of the header) but the card itself is a "made by" credit for this prototype:
- * a portrait, role, short bio, and links out to the author's site, repo, and
- * the experiments landing page.
- */
-export function ProfileMenu() {
-  const [open, setOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  // Close on click-outside and on Escape so the menu behaves like a real popover.
-  useEffect(() => {
-    if (!open) return;
-    function onClick(e: MouseEvent) {
-      if (!wrapperRef.current?.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  return (
-    <Box ref={wrapperRef} sx={{ position: "relative", marginLeft: `${tokens.space.sm}px` }}>
-      <Box
-        component="button"
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: "2px",
-          padding: 0,
-          border: 0,
-          background: "transparent",
-          cursor: "pointer",
-          color: tokens.color.textPrimary,
-          "&:hover .avatar-chevron, &[aria-expanded='true'] .avatar-chevron": {
-            transform: "rotate(180deg)",
-          },
-        }}
-      >
-        <Box
-          component="img"
-          src={mattAvatarUrl}
-          alt="Matt Donovan"
-          sx={{
-            width: 32,
-            height: 32,
-            borderRadius: `${tokens.radius.sm}px`,
-            objectFit: "cover",
-            display: "block",
-          }}
-        />
-        <ArrowDropDownIcon
-          className="avatar-chevron"
-          sx={{
-            color: tokens.color.textPrimary,
-            transition: `transform ${tokens.motion.duration.focus}ms ${tokens.motion.easing.focus}`,
-          }}
-        />
-      </Box>
-
-      {open && <ProfileCard onClose={() => setOpen(false)} />}
-    </Box>
-  );
-}
-
-export function ProfileCard({ onClose, align = "right" }: { onClose: () => void; align?: "right" | "center" }) {
-  const links: Array<{
-    href?: string;
-    to?: string;
-    label: string;
-    sub: string;
-    icon: ReactNode;
-    external?: boolean;
-  }> = [
-    {
-      href: "https://mattdonovan.me",
-      label: "mattdonovan.me",
-      sub: "Portfolio & contact",
-      icon: <OpenInNewIcon sx={{ fontSize: 16 }} />,
-      external: true,
-    },
-    {
-      href: "https://github.com/mattdonovan/netflix-ideas",
-      label: "GitHub repo",
-      sub: "Source for this prototype",
-      icon: <GitHubIcon sx={{ fontSize: 16 }} />,
-      external: true,
-    },
-    {
-      to: "/",
-      label: "More experiments",
-      sub: "Back to the landing page",
-      icon: <ScienceIcon sx={{ fontSize: 16 }} />,
-    },
-  ];
-
-  const isCenter = align === "center";
-  return (
-    <Box
-      role="menu"
-      sx={{
-        position: "absolute",
-        top: "calc(100% + 14px)",
-        right: isCenter ? "auto" : 0,
-        left: isCenter ? "50%" : "auto",
-        transform: isCenter ? "translateX(-50%)" : "none",
-        width: 300,
-        backgroundColor: tokens.color.surfaceMid,
-        border: `1px solid ${tokens.color.borderStrong}`,
-        borderRadius: `${tokens.radius.md}px`,
-        boxShadow: tokens.shadow.lg,
-        padding: `${tokens.space.sm}px`,
-        zIndex: 1000,
-        // Small caret pointing back up at the avatar.
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          top: -7,
-          right: isCenter ? "auto" : 12,
-          left: isCenter ? "50%" : "auto",
-          width: 12,
-          height: 12,
-          backgroundColor: tokens.color.surfaceMid,
-          borderTop: `1px solid ${tokens.color.borderStrong}`,
-          borderLeft: `1px solid ${tokens.color.borderStrong}`,
-          transform: isCenter ? "translateX(-50%) rotate(45deg)" : "rotate(45deg)",
-        },
-      }}
-    >
-      <Box sx={{ display: "flex", alignItems: "center", gap: `${tokens.space.sm}px`, padding: `${tokens.space.xs}px` }}>
-        <Box
-          component="img"
-          src={mattAvatarUrl}
-          alt="Matt Donovan"
-          sx={{
-            width: 56,
-            height: 56,
-            borderRadius: "50%",
-            objectFit: "cover",
-            flexShrink: 0,
-          }}
-        />
-        <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontSize: 16, fontWeight: tokens.type.weight.semibold, color: tokens.color.textPrimary, lineHeight: 1.2 }}>
-            Matt Donovan
-          </Typography>
-          <Typography sx={{ fontSize: 12, color: tokens.color.textSecondary, lineHeight: 1.3, mt: "2px" }}>
-            Product Designer · Expert design help for startups and small teams
-          </Typography>
-        </Box>
-      </Box>
-
-      <Box sx={{ height: 1, backgroundColor: tokens.color.border, marginBlock: `${tokens.space.xs}px` }} />
-
-      <Box sx={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-        {links.map((link) => {
-          const inner = (
-            <Box
-              role="menuitem"
-              onClick={onClose}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: `${tokens.space.sm}px`,
-                paddingInline: `${tokens.space.xs}px`,
-                paddingBlock: "10px",
-                borderRadius: `${tokens.radius.sm}px`,
-                cursor: "pointer",
-                color: tokens.color.textPrimary,
-                textDecoration: "none",
-                transition: `background-color ${tokens.motion.duration.press}ms ${tokens.motion.easing.press}`,
-                "&:hover": { backgroundColor: tokens.color.surfaceHigh },
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", color: tokens.color.textSecondary }}>{link.icon}</Box>
-              <Box sx={{ minWidth: 0, flex: 1 }}>
-                <Typography sx={{ fontSize: 13, fontWeight: tokens.type.weight.semibold, lineHeight: 1.2 }}>
-                  {link.label}
-                </Typography>
-                <Typography sx={{ fontSize: 11, color: tokens.color.textTertiary, lineHeight: 1.3, mt: "1px" }}>
-                  {link.sub}
-                </Typography>
-              </Box>
-            </Box>
-          );
-          if (link.external && link.href) {
-            return (
-              <a
-                key={link.label}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ textDecoration: "none", color: "inherit" }}
-              >
-                {inner}
-              </a>
-            );
-          }
-          if (link.to) {
-            return (
-              <RouterLink
-                key={link.label}
-                to={link.to}
-                style={{ textDecoration: "none", color: "inherit" }}
-              >
-                {inner}
-              </RouterLink>
-            );
-          }
-          return null;
-        })}
-      </Box>
-    </Box>
-  );
-}
 
 /**
  * Hero state, driven solely by the top row (`your-next-watch`):
@@ -723,7 +542,7 @@ type HeroFeature =
  * Primary CTA. Black with white text; the channel-bars glyph stays white at
  * rest and color-cycles on hover (reusing ChannelBarsIcon's `spinning` mode).
  */
-function TuneButton({ onClick }: { onClick: () => void }) {
+function TuneButton({ onClick, pill = false }: { onClick: () => void; pill?: boolean }) {
   const [hover, setHover] = useState(false);
   return (
     <Button
@@ -736,15 +555,16 @@ function TuneButton({ onClick }: { onClick: () => void }) {
         </Box>
       }
       sx={{
-        backgroundColor: "#000000",
+        backgroundColor: pill ? "rgba(60,60,66,0.72)" : "#000000",
         color: "#FFFFFF",
         fontSize: "clamp(13px, 1.3vw, 17px)",
         fontWeight: tokens.type.weight.bold,
-        paddingInline: "clamp(18px, 2.4vw, 34px)",
+        paddingInline: pill ? "clamp(20px, 2.6vw, 36px)" : "clamp(18px, 2.4vw, 34px)",
         paddingBlock: 0,
-        minHeight: "clamp(30px, 3.2vw, 42px)",
-        borderRadius: `${tokens.radius.sm}px`,
-        "&:hover": { backgroundColor: "#1A1A1A" },
+        minHeight: pill ? "clamp(34px, 3.4vw, 46px)" : "clamp(30px, 3.2vw, 42px)",
+        borderRadius: pill ? `${tokens.radius.pill}px` : `${tokens.radius.sm}px`,
+        backdropFilter: pill ? "blur(6px)" : undefined,
+        "&:hover": { backgroundColor: pill ? "rgba(80,80,88,0.86)" : "#1A1A1A" },
       }}
     >
       Tune Channels
@@ -752,20 +572,6 @@ function TuneButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function HeroSkeletonBar({ width, height }: { width: string; height: number }) {
-  return (
-    <Box
-      sx={{
-        width,
-        height,
-        borderRadius: `${tokens.radius.sm}px`,
-        backgroundColor: "rgba(255,255,255,0.13)",
-        "@keyframes heroPulse": { "0%,100%": { opacity: 0.45 }, "50%": { opacity: 0.9 } },
-        animation: "heroPulse 1.4s ease-in-out infinite",
-      }}
-    />
-  );
-}
 
 function Hero({
   feature,
@@ -1040,99 +846,192 @@ function Hero({
   );
 }
 
-/**
- * Page footer — quotes Netflix's actual home footer: a row of four social
- * icons, four columns of muted links, and the copyright line. Sits at the
- * bottom of the page on the same dark surface as the rest of Channels.
- */
-function Footer() {
-  const columns: string[][] = [
-    ["Audio Description", "Investor Relations", "Privacy", "Contact Us"],
-    ["Help Center", "Jobs", "Legal Notices", "Do Not Sell or Share My Personal Information"],
-    ["Gift Cards", "Netflix Shop", "Cookie Preferences", "Ad Choices"],
-    ["Media Center", "Terms of Use", "Corporate Information"],
-  ];
-  const socials = [
-    { Icon: FacebookIcon, label: "Facebook" },
-    { Icon: InstagramIcon, label: "Instagram" },
-    { Icon: TwitterIcon, label: "Twitter" },
-    { Icon: YouTubeIcon, label: "YouTube" },
-  ];
-  return (
-    <Box
-      component="footer"
-      sx={{
-        // Footer sits below the rows on the same page surface; add generous
-        // top padding so it doesn't crowd the last row's hover bloom.
-        marginTop: `${tokens.space["2xl"]}px`,
-        paddingBottom: `${tokens.space.xl}px`,
-        color: tokens.color.textSecondary,
-        fontSize: 13,
-        lineHeight: 1.6,
-      }}
-    >
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: `${tokens.space.md}px`,
-          mb: `${tokens.space.md}px`,
-        }}
-      >
-        {socials.map(({ Icon, label }) => (
-          <IconButton
-            key={label}
-            aria-label={label}
-            sx={{
-              padding: 0,
-              color: tokens.color.textPrimary,
-              "&:hover": { color: tokens.color.textSecondary, backgroundColor: "transparent" },
-            }}
-          >
-            <Icon sx={{ fontSize: 24 }} />
-          </IconButton>
-        ))}
-      </Box>
 
+/**
+ * TV hero — the inset billboard.
+ *
+ * Where the web hero is a full-bleed band that the first row's title crawls
+ * up into, the TV hero is a discrete object: an inset rounded rectangle with
+ * a visible edge, taking most of the screen, with the next row's title
+ * peeking below it. That edge is doing real work — it tells you the hero is
+ * one focusable thing rather than a background the rows sit on top of.
+ */
+function HeroTv({
+  feature,
+  onTune,
+  onWatchOverview,
+}: {
+  feature: HeroFeature;
+  onTune: () => void;
+  onWatchOverview: () => void;
+}) {
+  const [parallax, setParallax] = useState({ x: 0, y: 0 });
+  function handleMove(e: React.MouseEvent<HTMLDivElement>) {
+    const r = e.currentTarget.getBoundingClientRect();
+    setParallax({ x: (e.clientX - r.left) / r.width - 0.5, y: (e.clientY - r.top) / r.height - 0.5 });
+  }
+
+  // Backdrop: featured art when the top row is tuned, a shimmer while it
+  // tunes, and otherwise the Control mesh — oversized so it can parallax with
+  // the cursor without opening a gap at the edges.
+  const backdrop =
+    feature.phase === "content" && feature.backdropUrl ? (
+      <BillboardArt src={feature.backdropUrl} />
+    ) : feature.phase === "loading" ? (
+      <BillboardSkeleton />
+    ) : (
       <Box
         sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" },
-          columnGap: `${tokens.space.md}px`,
-          rowGap: `${tokens.space.xs}px`,
-          mb: `${tokens.space.md}px`,
+          position: "absolute",
+          inset: "-8%",
+          transform: `translate(${parallax.x * 24}px, ${parallax.y * 18}px)`,
+          transition: "transform 320ms ease-out",
+          willChange: "transform",
+          background: CONTROL_MESH,
         }}
+      />
+    );
+
+  return (
+    <TvSurfaceHead navTint="rgba(60,20,64,0.92)">
+      <Billboard
+        onMouseMove={handleMove}
+        onMouseLeave={() => setParallax({ x: 0, y: 0 })}
+        backdrop={backdrop}
+        overlay={
+          feature.phase === "default" ? (
+            <Box
+              sx={{
+                position: "absolute",
+                top: "50%",
+                left: { md: "76%", lg: "72%" },
+                transform: "translate(-50%, -50%)",
+                color: "#FFFFFF",
+                display: { xs: "none", md: "block" },
+                filter: "drop-shadow(0 8px 40px rgba(0,0,0,0.35))",
+              }}
+            >
+              <ChannelBarsIcon size={280} interactive />
+            </Box>
+          ) : undefined
+        }
+        badges={
+          feature.phase === "content" ? (
+            <ReasonBadge spec={{ kind: "recommend", text: "We think you'll love this" }} />
+          ) : (
+            <ReasonBadge spec={{ kind: "announce", text: "Included with Premium" }} />
+          )
+        }
       >
-        {columns.map((col, ci) => (
-          <Box key={ci} sx={{ display: "flex", flexDirection: "column", gap: `${tokens.space.xs}px` }}>
-            {col.map((link) => (
-              <Typography
-                key={link}
-                component="a"
-                href="#"
+            {feature.phase === "loading" ? (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: "14px", mb: "clamp(16px, 2vw, 28px)" }}>
+                <HeroSkeletonBar width="min(440px, 72%)" height={52} />
+                <HeroSkeletonBar width="min(320px, 56%)" height={20} />
+              </Box>
+            ) : feature.phase === "content" ? (
+              <Box
+                role="button"
+                onClick={feature.onOpen}
+                sx={{ cursor: "pointer", mb: "clamp(16px, 2vw, 28px)", display: "inline-flex", maxWidth: "100%" }}
+              >
+                {feature.logoUrl ? (
+                  <Box
+                    component="img"
+                    src={feature.logoUrl}
+                    alt={feature.title}
+                    sx={{
+                      maxWidth: "min(440px, 80%)",
+                      maxHeight: "clamp(64px, 12vw, 150px)",
+                      objectFit: "contain",
+                      objectPosition: "left bottom",
+                      filter: "drop-shadow(0 4px 24px rgba(0,0,0,0.55))",
+                    }}
+                  />
+                ) : (
+                  <Typography
+                    component="h1"
+                    sx={{
+                      fontSize: { xs: 26, sm: "clamp(36px, 5.6vw, 80px)" },
+                      lineHeight: 1.02,
+                      color: tokens.color.textPrimary,
+                      fontWeight: tokens.type.weight.bold,
+                      letterSpacing: "-0.02em",
+                      textShadow: "0 4px 24px rgba(0,0,0,0.55)",
+                    }}
+                  >
+                    {feature.title}
+                  </Typography>
+                )}
+              </Box>
+            ) : (
+              <>
+                <Box
+                  sx={{
+                    mb: "clamp(10px, 1.2vw, 16px)",
+                    filter: "drop-shadow(0 4px 24px rgba(0,0,0,0.55))",
+                    "@keyframes controlIn": {
+                      from: { opacity: 0, transform: "translateY(20px)" },
+                      to: { opacity: 1, transform: "translateY(0)" },
+                    },
+                    animation: "controlIn 650ms cubic-bezier(0.22, 1, 0.36, 1) both",
+                  }}
+                >
+                  <ControlWordmark height="clamp(34px, 5.2vw, 64px)" color="#FFFFFF" />
+                </Box>
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    mb: "clamp(12px, 1.6vw, 20px)",
+                    color: "rgba(255,255,255,0.82)",
+                    fontSize: "clamp(11px, 1vw, 13px)",
+                  }}
+                >
+                  Presented by <SamsungWordmark height={12} color="#FFFFFF" />
+                </Box>
+
+                <Typography
+                  sx={{
+                    color: tokens.color.textPrimary,
+                    fontSize: "clamp(14px, 1.5vw, 22px)",
+                    maxWidth: "36ch",
+                    mb: "clamp(16px, 2vw, 28px)",
+                    textShadow: "0 2px 12px rgba(0,0,0,0.6)",
+                  }}
+                >
+                  Tune channels to control your content
+                </Typography>
+              </>
+            )}
+
+            {/* Pill CTAs — the TV redesign's button shape. */}
+            <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "clamp(8px, 1vw, 14px)" }}>
+              <Button
+                onClick={onWatchOverview}
+                startIcon={<PlayArrowIcon sx={{ fontSize: "clamp(20px, 2.2vw, 28px)" }} />}
                 sx={{
-                  fontSize: 13,
-                  color: tokens.color.textSecondary,
-                  textDecoration: "underline",
-                  textUnderlineOffset: "3px",
-                  textDecorationColor: "rgba(168,168,168,0.4)",
-                  cursor: "pointer",
-                  "&:hover": { color: tokens.color.textPrimary },
+                  backgroundColor: tokens.color.textPrimary,
+                  color: tokens.color.base,
+                  fontSize: "clamp(13px, 1.3vw, 17px)",
+                  fontWeight: tokens.type.weight.bold,
+                  paddingInline: "clamp(20px, 2.6vw, 36px)",
+                  paddingBlock: 0,
+                  minHeight: "clamp(34px, 3.4vw, 46px)",
+                  borderRadius: `${tokens.radius.pill}px`,
+                  "&:hover": { backgroundColor: "rgba(255,255,255,0.85)" },
                 }}
               >
-                {link}
-              </Typography>
-            ))}
-          </Box>
-        ))}
-      </Box>
-
-      <Typography sx={{ fontSize: 12, color: tokens.color.textSecondary }}>
-        © 1997-{new Date().getFullYear()} Netflix, Inc.
-      </Typography>
-    </Box>
+                Watch Overview
+              </Button>
+              <TuneButton onClick={onTune} pill />
+            </Box>
+      </Billboard>
+    </TvSurfaceHead>
   );
 }
+
 
 /**
  * Target tiles per row. Non-Top-10 rows pad up to this count by cycling
@@ -1201,12 +1100,14 @@ function ScrambleText({
 }
 
 function ChannelRow({
+  variant,
   channel,
   override,
   onTileSelect,
   onRequestSwitch,
   onOpenOverview,
 }: {
+  variant: ChannelsVariant;
   channel: Channel;
   override?: RowOverride;
   onTileSelect: (content: DetailModalContent) => void;
@@ -1231,7 +1132,7 @@ function ChannelRow({
 
   function selectTile(exemplar: { title: string; year?: number }, i: number) {
     const entry = findInCatalog(exemplar.title, exemplar.year);
-    onTileSelect(buildDetailContent({ entry, fallbackTitle: exemplar.title, channel, rank: isTopTen ? i + 1 : undefined }));
+    onTileSelect(buildDetailContent({ entry, fallbackTitle: exemplar.title, ...detailHints(channel), rank: isTopTen ? i + 1 : undefined }));
   }
 
   // While the row is tuned, swap its label/icon for the override's title. The
@@ -1263,6 +1164,62 @@ function ChannelRow({
 
   const skeletons = (n: number) =>
     Array.from({ length: n }, (_, i) => <SkeletonTile key={`sk-${i}`} aspect="boxart" />);
+
+  // ---- TV variant ----
+  // Every channel — Top 10 included — renders through the same focus-committed
+  // row. On TV there is no separate "Top 10 component": the ranking is a
+  // numeral decoration behind the same card, which is why the redesign's rows
+  // all feel like one mechanism.
+  if (variant === "tv") {
+    const items: FocusRowItem[] = contentTiles.map((ex, i) => {
+      const entry = findInCatalog(ex.title, ex.year);
+      const meta = buildRowMeta(entry, ex.title);
+      const swatch = channel.tilePalette[i % channel.tilePalette.length];
+      return {
+        key: `${ex.title}-${i}`,
+        title: ex.title,
+        posterUrl: entry?.posterUrl ?? undefined,
+        backdropUrl: entry?.backdropUrl ?? undefined,
+        logoUrl: entry?.logoUrl ?? undefined,
+        color: `linear-gradient(155deg, ${swatch}, ${darken(swatch, 0.5)})`,
+        badges: reasonBadges({
+          channelId: channel.id,
+          index: i,
+          total: contentTiles.length,
+          kind: entry?.kind ?? null,
+          rank: isTopTen ? i + 1 : undefined,
+          tuned: !!override,
+        }),
+        metaParts: meta.metaParts,
+        rating: meta.rating,
+        hasCaptions: meta.hasCaptions,
+        synopsis: meta.synopsis,
+        actionLabel: entry?.kind === "game" ? "Play Game" : "Play",
+        onOpen: () => selectTile(ex, i),
+      };
+    });
+
+    // The Control card leads the first row at rest and moves to the end once
+    // the row is tuned, so fresh results take focus — same rule as the web row.
+    if (isFirstRow) {
+      const control = controlFocusItem(onOpenOverview);
+      if (override) items.push(control);
+      else items.unshift(control);
+    }
+
+    return (
+      <FocusRow
+        title={titleNode}
+        leadingIcon={leadingIcon}
+        hoverHint={<ShuffleIcon sx={{ fontSize: 16 }} />}
+        onTitleClick={onRequestSwitch}
+        items={items}
+        ranked={isTopTen}
+        loading={loading}
+        loadingCount={isTopTen ? 10 : TARGET_TILE_COUNT}
+      />
+    );
+  }
 
   // Non-first rows that have been tuned render as a plain Row (dropping Top 10
   // numerals etc.): loading shimmer, then the real tuned tiles.
@@ -1728,6 +1685,82 @@ function badgeForChannel(channelId: string, index: number, total: number): TileB
   return undefined;
 }
 
+
+/**
+ * Reason badges for a card. This is the mechanic most worth porting: Netflix
+ * renders the *why* behind a recommendation as chrome. Untuned rows carry the
+ * editorial reasons (recently added, new season); tuned rows carry the media
+ * type instead, because a mixed movie/show/game result is the thing the user
+ * needs to read at a glance.
+ */
+function reasonBadges({
+  channelId,
+  index,
+  total,
+  kind,
+  rank,
+  tuned,
+}: {
+  channelId: string;
+  index: number;
+  total: number;
+  kind: CatalogEntry["kind"] | null;
+  rank?: number;
+  tuned: boolean;
+}): ReasonBadgeSpec[] {
+  const out: ReasonBadgeSpec[] = [];
+
+  if (rank) out.push({ kind: "topTen", text: `No. ${rank} in Series` });
+
+  if (tuned) {
+    if (kind === "movie") out.push({ kind: "movie", text: "Film" });
+    else if (kind === "tv") out.push({ kind: "show", text: "Series" });
+    else if (kind === "game") out.push({ kind: "game", text: "Game" });
+    return out;
+  }
+
+  if (channelId === "netflix-games") {
+    out.push({ kind: "game", text: "Included with Netflix" });
+    return out;
+  }
+
+  const editorial = badgeForChannel(channelId, index, total);
+  if (editorial?.red) out.push({ kind: "announce", text: editorial.red });
+  if (channelId === "todays-top-picks" && index === 1) {
+    out.push({ kind: "recommend", text: "We think you'll love this" });
+  }
+  if (channelId === "critically-acclaimed-tv" && index === 0) {
+    out.push({ kind: "rewatch", text: "Highly rewatched" });
+  }
+  return out;
+}
+
+/**
+ * The Control explainer, expressed as a focus-row card. It reuses the hero's
+ * mesh so the feature reads as one thing across the page.
+ */
+function controlFocusItem(onOpen: () => void): FocusRowItem {
+  return {
+    key: "control-card",
+    title: "Control",
+    color: CONTROL_MESH,
+    artwork: (
+      <Box sx={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: "10%" }}>
+        <Box
+          component="img"
+          src={CONTROL_LOGO_DATA_URI}
+          alt="Control"
+          sx={{ width: "52%", filter: "drop-shadow(0 2px 10px rgba(0,0,0,0.45))" }}
+        />
+      </Box>
+    ),
+    badges: [{ kind: "announce", text: "Presented by Samsung" }],
+    metaParts: ["Feature", "Movies, series and games"],
+    synopsis: "Describe what you're in the mood for and any row retunes into a fresh mix. Open the overview to see how it works.",
+    onOpen,
+  };
+}
+
 function ChannelTile({
   index,
   title,
@@ -1795,162 +1828,5 @@ function ChannelTile({
       }}
     />
   );
-}
-
-/**
- * Synthesize a DetailModalContent from the catalog entry + the channel that
- * surfaced the tile. The catalog only carries title/year/posterUrl/backdropUrl,
- * so the rest of the modal's surface (cast, director, description, genres,
- * mood, maturity) is generated deterministically from the title so the modal
- * is stable across re-opens. "More Like This" is sampled from other catalog
- * entries that have backdrop art.
- */
-const SYNTH_CAST = [
-  "Tilda Swinton", "Oscar Isaac", "Park Hae-soo", "Florence Pugh", "Diego Luna",
-  "Letitia Wright", "Ayo Edebiri", "Ben Whishaw", "Sandra Oh", "Andrew Scott",
-  "Hoyeon Jung", "Jeff Bridges", "Lily Gladstone", "Steven Yeun", "Janelle Monáe",
-];
-const SYNTH_DIRECTORS = [
-  "Celine Song", "Bong Joon-ho", "Lulu Wang", "Barry Jenkins", "Chloé Zhao",
-  "Justine Triet", "Hirokazu Kore-eda", "Jonathan Glazer", "Greta Gerwig",
-];
-const SYNTH_GENRES = [
-  ["Drama", "Character Study"],
-  ["Thriller", "Mystery"],
-  ["Comedy", "Drama"],
-  ["Sci-Fi", "Drama"],
-  ["Crime", "Drama"],
-  ["Romance", "Drama"],
-  ["Action", "Adventure"],
-  ["International", "Drama"],
-];
-const SYNTH_MATURITY_NOTES = [
-  ["language", "violence"],
-  ["mature themes", "language"],
-  ["smoking", "language"],
-  ["sexual content", "language"],
-  ["violence"],
-  ["mature themes"],
-];
-const SYNTH_RATINGS = ["TV-MA", "TV-14", "R", "PG-13", "TV-MA", "TV-14"];
-const SYNTH_RUNTIMES_MOVIE = ["1h 58m", "2h 04m", "2h 11m", "2h 24m", "1h 47m"];
-const SYNTH_RUNTIMES_TV = ["2 Seasons", "3 Seasons", "Limited Series", "1 Season", "4 Seasons"];
-const SYNTH_DESCRIPTIONS = [
-  "An unsettled stretch of time gives way to a quiet reckoning — old loyalties bend, and the room everyone walks into is never quite the one they expected.",
-  "Two characters, a city that knows them too well, and the slow accumulation of small choices that turn into a life. Patient, observed, and very alive.",
-  "A near-future premise hides a deeply human story about what we owe each other, and what we'll do to keep the things we already have.",
-  "Half-thriller, half-elegy: a setting that should be familiar turns strange a frame at a time, until the people inside it have to decide what's worth saving.",
-];
-
-// FNV-1a-ish 32-bit hash for stable per-title sampling.
-function hashString(s: string): number {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619) >>> 0;
-  }
-  return h;
-}
-
-function pickFrom<T>(arr: T[], seed: number, offset = 0): T {
-  return arr[(seed + offset) % arr.length];
-}
-
-function sampleN<T>(arr: T[], n: number, seed: number): T[] {
-  const out: T[] = [];
-  const used = new Set<number>();
-  let i = 0;
-  while (out.length < n && used.size < arr.length) {
-    const idx = (seed + i * 31) % arr.length;
-    if (!used.has(idx)) {
-      used.add(idx);
-      out.push(arr[idx]);
-    }
-    i++;
-  }
-  return out;
-}
-
-function buildDetailContent({
-  entry,
-  fallbackTitle,
-  channel,
-  rank,
-}: {
-  entry: CatalogEntry | null;
-  fallbackTitle: string;
-  channel: Channel;
-  rank?: number;
-}): DetailModalContent {
-  const title = entry?.title ?? fallbackTitle;
-  const seed = hashString(title);
-  const kind: "movie" | "tv" = entry?.kind === "tv" ? "tv" : entry?.kind === "movie" ? "movie" : seed % 2 === 0 ? "tv" : "movie";
-
-  const cast = sampleN(SYNTH_CAST, 5, seed);
-  const director = kind === "movie" ? pickFrom(SYNTH_DIRECTORS, seed, 3) : undefined;
-  const baseGenres = pickFrom(SYNTH_GENRES, seed, 1);
-  const genres = [channel.category.title.split(/[\s]/)[0] || "Featured", ...baseGenres].slice(0, 3);
-  const mood = channel.category.tone.slice(0, 3);
-  const rating = pickFrom(SYNTH_RATINGS, seed, 2);
-  const runtime = kind === "tv"
-    ? pickFrom(SYNTH_RUNTIMES_TV, seed, 4)
-    : pickFrom(SYNTH_RUNTIMES_MOVIE, seed, 4);
-  const description = pickFrom(SYNTH_DESCRIPTIONS, seed, 5);
-  const maturityNotes = pickFrom(SYNTH_MATURITY_NOTES, seed, 6);
-  const match = 90 + (seed % 9); // 90–98
-
-  // Suggestions: other catalog entries with backdrops, sampled stably.
-  const pool = catalog.filter(
-    (c) => c.title !== title && c.backdropUrl,
-  );
-  const picked = sampleN(pool, 6, seed + 11);
-  const suggestions: DetailModalSuggestion[] = picked.map((p, i) => {
-    const s = hashString(p.title);
-    return {
-      title: p.title,
-      year: p.year,
-      backdropUrl: p.backdropUrl ?? undefined,
-      match: 88 + (s % 11),
-      rating: pickFrom(SYNTH_RATINGS, s, 2),
-      runtime: (p.kind === "tv" ? SYNTH_RUNTIMES_TV : SYNTH_RUNTIMES_MOVIE)[(s + i) % 5],
-      isNew: i === 0,
-      description: pickFrom(SYNTH_DESCRIPTIONS, s, 5),
-    };
-  });
-
-  return {
-    title,
-    year: entry?.year,
-    kind,
-    backdropUrl: entry?.backdropUrl ?? undefined,
-    posterUrl: entry?.posterUrl ?? undefined,
-    logoUrl: entry?.logoUrl ?? undefined,
-    match,
-    rating,
-    runtime,
-    formats: ["HD", "AD"],
-    isNew: channel.id === "new-on-netflix",
-    topTenRank: rank,
-    description,
-    cast,
-    director,
-    genres,
-    mood,
-    maturityNotes,
-    maturityAudience: "Recommended for ages 17 and up",
-    suggestions,
-  };
-}
-
-function darken(hex: string, amount: number): string {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  const k = 1 - amount;
-  const dr = Math.round(r * k);
-  const dg = Math.round(g * k);
-  const db = Math.round(b * k);
-  return `#${[dr, dg, db].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 

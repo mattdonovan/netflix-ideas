@@ -6,6 +6,7 @@ import AddIcon from "@mui/icons-material/Add";
 import ThumbUpOffAltIcon from "@mui/icons-material/ThumbUpOffAlt";
 import VolumeOffIcon from "@mui/icons-material/VolumeOff";
 import { tokens } from "@/theme/tokens";
+import { TV_ACTION_SX } from "./actions";
 
 /**
  * Title-detail modal — adapted from Netflix Design System (Figma 121-4892).
@@ -63,10 +64,19 @@ export function DetailModal({
   open,
   content,
   onClose,
+  actionSlot,
+  belowHero,
 }: {
   open: boolean;
   content: DetailModalContent | null;
   onClose: () => void;
+  /**
+   * Extra controls rendered beside Play. Catch Up puts its Jump button here;
+   * Control passes nothing, so the button row is unchanged for it.
+   */
+  actionSlot?: ReactNode;
+  /** Full-width band between the hero and the info block — the household timeline. */
+  belowHero?: ReactNode;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -120,7 +130,8 @@ export function DetailModal({
           boxShadow: tokens.shadow.lg,
         }}
       >
-        <Hero content={content} onClose={onClose} />
+        <Hero content={content} onClose={onClose} actionSlot={actionSlot} />
+        {belowHero}
         <MovieInfo content={content} />
         {content.suggestions.length > 0 && <MoreLikeThis suggestions={content.suggestions} />}
         <About content={content} />
@@ -129,7 +140,15 @@ export function DetailModal({
   );
 }
 
-function Hero({ content, onClose }: { content: DetailModalContent; onClose: () => void }) {
+function Hero({
+  content,
+  onClose,
+  actionSlot,
+}: {
+  content: DetailModalContent;
+  onClose: () => void;
+  actionSlot?: ReactNode;
+}) {
   return (
     <Box
       sx={{
@@ -215,19 +234,15 @@ function Hero({ content, onClose }: { content: DetailModalContent; onClose: () =
           <Button
             startIcon={<PlayArrowIcon sx={{ fontSize: 28 }} />}
             sx={{
+              ...TV_ACTION_SX,
               backgroundColor: tokens.color.textPrimary,
               color: tokens.color.textInverse,
-              fontSize: 16,
-              fontWeight: tokens.type.weight.bold,
-              paddingInline: `${tokens.space.lg}px`,
-              minHeight: 44,
-              borderRadius: `${tokens.radius.sm}px`,
-              textTransform: "none",
               "&:hover": { backgroundColor: "rgba(245,245,245,0.85)" },
             }}
           >
             Play
           </Button>
+          {actionSlot}
           <CircleButton icon={<AddIcon sx={{ fontSize: 22 }} />} label="Add to My List" />
           <CircleButton icon={<ThumbUpOffAltIcon sx={{ fontSize: 20 }} />} label="Rate this title" />
         </Box>

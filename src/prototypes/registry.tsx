@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 
+import { CatchUp } from "./catch-up";
 // SCRIPT ANCHOR: imports (do not remove — `npm run build-idea` inserts above this line)
 
 /**
@@ -34,5 +35,6 @@ export type RegisteredPrototype = {
 };
 
 export const registeredPrototypes: RegisteredPrototype[] = [
+  { slug: "catch-up", label: "Catch Up", glyph: "👥", Component: CatchUp },
   // SCRIPT ANCHOR: entries (do not remove — `npm run build-idea` inserts above this line)
 ];

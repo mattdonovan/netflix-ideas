@@ -14,6 +14,12 @@ I built this in a few evenings to practice two things. One was a review habit. A
 
 The surface is a desktop browser pretending to be a TV. The catalog is a small enriched set of real titles. The Claude calls are real but scoped. I don't work at Netflix.
 
+**The layout is Netflix's 2025 TV language, not netflix.com's.** Web Netflix answers "what is this?" with an overlay — hover a card and a bigger card pops on top of its neighbors, carrying the metadata with it. TV Netflix answers it by re-flowing the row: one card is focused and renders large and landscape, the rest collapse to portrait posters, and the metadata lands in fixed space *below* the reel where it covers nothing. Discovery uses the TV model, on the bet that it reads better in a browser than the browser's own does.
+
+**Focus never moves on hover.** A D-pad press, an Apple TV swipe, and a Roku arrow are all deliberate discrete inputs; a pointer sweeping across a row is not, and treating it as one makes the layout lurch under a cursor that was only passing through. The pointer equivalent of pressing right is a click — so a click is the only thing that moves focus. Click a card to focus it, click the focused card to open it: the same select-then-OK rhythm the remote has. Arrow keys and the edge chevrons step one card at a time for anyone who wants the literal D-pad. Hover still marks the card a click would land on, so the target is never ambiguous.
+
+The previous web-language build is still in the repo as the control. Compare them at `/experiments?compare=channels-main,channels-web`.
+
 ## Why review lenses
 
 Every visual pass gets run through [`context/review-lenses.md`](context/review-lenses.md). It's grown into a real system over the iterations — three tiers for reviewing existing work, plus a separate conception lens that fires *before* any of them when a new feature is being shaped.
@@ -49,7 +55,7 @@ This whole thing got off the ground because of [Ivanna Jeraskina's Netflix Desig
 
 ## Try your own idea
 
-This thing is a sandbox. Clone it. Rip out Discovery. Drop in your own row, your own loop, your own provocation. The primitives (Row, TopTenRow, Tile, the focus engine) are reusable. The Hawkins-flavored tokens give you a credible-looking starting surface in about ten minutes. If you build something fun on top of it, I'd love to see it.
+This thing is a sandbox. Clone it. Rip out Discovery. Drop in your own row, your own loop, your own provocation. The primitives (FocusRow, TvCard, TvNav for the TV language; Row, TopTenRow, Tile for the web one) are reusable. The Hawkins-flavored tokens give you a credible-looking starting surface in about ten minutes. If you build something fun on top of it, I'd love to see it.
 
 ```bash
 git clone https://github.com/mattdonovan/netflix-ideas

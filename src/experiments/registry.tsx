@@ -43,21 +43,21 @@ export type Experiment = {
 export const experiments: Experiment[] = [
   {
     id: "channels-main",
-    name: "Discovery — canonical",
-    description: "The current main prototype. Use as the baseline for any side-by-side comparison.",
+    name: "Discovery — TV language",
+    description:
+      "The current main prototype, in Netflix's 2025 TV language: centered pill nav, inset billboard, and focus-committed rows where one card expands to landscape in place and its metadata renders below the reel.",
     tag: "baseline",
     validation: "validated",
-    render: () => <Channels />,
+    render: () => <Channels variant="tv" />,
   },
-  // Variants are added here as they're created. Seeded with one placeholder so the
-  // registry pattern is visible and the compare view has something to render.
   {
-    id: "channels-prompt-top",
-    name: "Discovery — prompt at top",
-    description: "Variant where the prompt panel slides down from the top of the screen instead of overlaying center. Tests whether top-anchored prompts feel less interruptive on a focused row.",
+    id: "channels-web",
+    name: "Discovery — web language",
+    description:
+      "The prior build, in netflix.com's language: left-aligned nav and hover-bloom cards that pop a metadata popover over their neighbors. Kept as the control for the question the TV port is testing — whether committed focus beats an overlay on a pointer device.",
     tag: "layout",
-    validation: "draft",
-    render: () => <Channels />, // Placeholder — swap with VariantTopPrompt component when authored.
+    validation: "deprecated",
+    render: () => <Channels variant="web" />,
   },
 ];
 
