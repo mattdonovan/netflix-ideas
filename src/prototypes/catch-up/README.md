@@ -1,6 +1,8 @@
-# Catch Up
+# Social
 
-**Route:** [`/catch-up`](http://localhost:5173/catch-up)
+*Formerly "Catch Up". The code still lives in `src/prototypes/catch-up/`; `/catch-up` redirects here.*
+
+**Route:** [`/social`](http://localhost:5173/social)
 
 Household watch state, on the Netflix TV surface.
 

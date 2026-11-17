@@ -1,5 +1,5 @@
 import { Box, Typography, IconButton, Button, Tooltip } from "@mui/material";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
@@ -34,6 +34,11 @@ import { seedChannels, type Channel } from "./seedData";
 import { findInCatalog, type CatalogEntry } from "@/lib/catalog";
 import { catalog } from "@/lib/catalog";
 import { tuneChannel, type TuneCandidate } from "@/lib/claude";
+import { discoveryFocusItem } from "./discover/DiscoveryCard";
+import DISCOVERY_VIDEO from "@/assets/discovery-overview.mp4";
+import DISCOVERY_POSTER from "@/assets/discovery-overview-poster.jpg";
+// Discovery carries a ~5 MB title pool; load it only when the TV view opens.
+const DiscoveryContent = lazy(() => import("./Discovery").then((m) => ({ default: m.DiscoveryContent })));
 
 /**
  * Context a channel row contributes to a title's detail view. The surface's
@@ -71,7 +76,15 @@ export function Channels({ variant = "tv" }: { variant?: ChannelsVariant } = {})
   return (
     <FocusProvider>
       <TvFrame>
-        <ChannelsContent variant={variant} />
+        {/* The TV variant is Discovery; the web variant keeps the original
+            tune-a-channel flow for side-by-side comparison in /experiments. */}
+        {variant === "tv" ? (
+          <Suspense fallback={null}>
+            <DiscoveryContent />
+          </Suspense>
+        ) : (
+          <ChannelsContent variant={variant} />
+        )}
       </TvFrame>
     </FocusProvider>
   );
@@ -523,7 +536,7 @@ function Header() {
  */
 // Mesh gradient mixing the channel-bars hover hues — the Control feature's
 // signature backdrop. Shared by the hero, the Control card, and the overview.
-const CONTROL_MESH = `
+export const CONTROL_MESH = `
   radial-gradient(60% 80% at 82% 22%, rgba(255,45,130,0.85) 0%, rgba(255,45,130,0) 60%),
   radial-gradient(55% 75% at 96% 68%, rgba(123,47,255,0.80) 0%, rgba(123,47,255,0) 60%),
   radial-gradient(60% 80% at 60% 94%, rgba(194,24,91,0.75) 0%, rgba(194,24,91,0) 60%),
@@ -1099,13 +1112,14 @@ function ScrambleText({
   return <>{displayed}</>;
 }
 
-function ChannelRow({
+export function ChannelRow({
   variant,
   channel,
   override,
   onTileSelect,
   onRequestSwitch,
   onOpenOverview,
+  onOpenDiscovery,
 }: {
   variant: ChannelsVariant;
   channel: Channel;
@@ -1113,6 +1127,8 @@ function ChannelRow({
   onTileSelect: (content: DetailModalContent) => void;
   onRequestSwitch: () => void;
   onOpenOverview: () => void;
+  /** When set, the Discovery card leads the first row, ahead of Control. */
+  onOpenDiscovery?: () => void;
 }) {
   const sectionId = `channel-${channel.id}`;
   const isTopTen = channel.id === "top-10-tv-us";
@@ -1202,9 +1218,9 @@ function ChannelRow({
     // The Control card leads the first row at rest and moves to the end once
     // the row is tuned, so fresh results take focus — same rule as the web row.
     if (isFirstRow) {
-      const control = controlFocusItem(onOpenOverview);
-      if (override) items.push(control);
-      else items.unshift(control);
+      const lead = [...(onOpenDiscovery ? [discoveryFocusItem(onOpenDiscovery)] : []), controlFocusItem(onOpenOverview)];
+      if (override) items.push(...lead);
+      else items.unshift(...lead);
     }
 
     return (
@@ -1371,11 +1387,13 @@ function TakeControlTile({ onClick }: { onClick: () => void }) {
 }
 
 /**
- * Take Control explainer modal. Fires from the hero's "Watch" button and the
- * Take Control media card. Same centered-overlay language as DetailModal /
- * SwitchChannelsModal — this is where the prototype describes itself.
+ * Feature explainer modal: where a prototype describes itself. `control` is
+ * the earlier Control feature (Loom walkthrough); `discovery` is the current
+ * one (its own demo video). Same centered-overlay language as DetailModal.
  */
-function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export type AboutKind = "control" | "discovery";
+
+export function AboutModal({ open, kind = "control", onClose }: { open: boolean; kind?: AboutKind; onClose: () => void }) {
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -1394,11 +1412,12 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   }, [open, onClose]);
 
   if (!open) return null;
+  const name = kind === "control" ? "Control" : "Discovery";
   return (
     <Box
       role="dialog"
       aria-modal="true"
-      aria-label="Control"
+      aria-label={name}
       onClick={onClose}
       sx={{
         position: "fixed",
@@ -1417,7 +1436,7 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
         sx={{
           position: "relative",
           width: "100%",
-          maxWidth: 620,
+          maxWidth: kind === "discovery" ? 760 : 620,
           backgroundColor: tokens.color.surfaceLow,
           borderRadius: { xs: 0, md: `${tokens.radius.md}px` },
           color: tokens.color.textPrimary,
@@ -1425,21 +1444,29 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           overflow: "hidden",
         }}
       >
-        {/* Lead — the overview walkthrough video. */}
+        {/* Lead: the walkthrough video. */}
         <Box sx={{ position: "relative" }}>
-          <Box
-            component="iframe"
-            src="https://www.loom.com/embed/7f790ed025b94629ab89666cbc1dbe42"
-            title="Control overview"
-            allowFullScreen
-            sx={{
-              width: "100%",
-              aspectRatio: "4 / 3",
-              border: 0,
-              display: "block",
-              backgroundColor: tokens.color.base,
-            }}
-          />
+          {kind === "control" ? (
+            <Box
+              component="iframe"
+              src="https://www.loom.com/embed/7f790ed025b94629ab89666cbc1dbe42"
+              title="Control overview"
+              allowFullScreen
+              sx={{ width: "100%", aspectRatio: "4 / 3", border: 0, display: "block", backgroundColor: tokens.color.base }}
+            />
+          ) : (
+            <Box
+              component="video"
+              src={DISCOVERY_VIDEO}
+              poster={DISCOVERY_POSTER}
+              title="Discovery demo"
+              ref={startPlaying}
+              controls
+              playsInline
+              preload="metadata"
+              sx={{ width: "100%", aspectRatio: "16 / 9", display: "block", backgroundColor: tokens.color.base }}
+            />
+          )}
           <IconButton
             aria-label="Close"
             onClick={onClose}
@@ -1476,38 +1503,92 @@ function AboutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
               marginBottom: `${tokens.space.sm}px`,
             }}
           >
-            Control · a Netflix design prototype
+            {name} · a Netflix design prototype
           </Typography>
-
           <Box sx={{ display: "flex", flexDirection: "column", gap: `${tokens.space.sm}px` }}>
-            <AboutSectionLabel>What this is</AboutSectionLabel>
-          <AboutParagraph>
-            Control is a browser prototype for the hardest part of Netflix — deciding what to watch. You take control of a row: describe what you're in the mood for and it retunes into a real mix of movies, shows, and games, chosen in the moment.
-          </AboutParagraph>
-
-          <AboutSectionLabel>An experiment in ingredients</AboutSectionLabel>
-          <AboutParagraph>
-            The bigger idea is widening what goes into the mix. Alongside movies and shows, this version pulls in games, and treats partnerships as a first-class ingredient: Control is presented by Samsung and unlocked through a partner sign-in — the way a device maker or carrier could light it up for their members. More ingredients, better mixes.
-          </AboutParagraph>
-
-          <AboutSectionLabel>How it works</AboutSectionLabel>
-          <AboutParagraph>
-            Open Tune Channels, or click any row title, and describe what you want — something like a tense sci-fi heist, or cozy games and shows. Claude reads your prompt and picks a matching set of titles from a real catalog, so the row fills with actual artwork. Choose which media types to include, and the hero features the first result.
-          </AboutParagraph>
-
-          <AboutSectionLabel>What's real, what's set dressing</AboutSectionLabel>
-          <AboutParagraph>
-            The catalog and its artwork are real, pulled from public movie, show, and game databases, and the tuning is a live Claude call that chooses from it. Everything around it — the chrome, the badges, the modals — is faithful set dressing so the new behavior reads as a design choice rather than a demo.
-          </AboutParagraph>
-
-          <AboutSectionLabel>What's next</AboutSectionLabel>
-          <AboutParagraph>
-            More discovery levers — playful, engaging ways to steer the mix beyond a text box — plus more partner and content ingredients. The walkthrough above shows where it stands today.
-          </AboutParagraph>
+            {kind === "control" ? <ControlAbout /> : <DiscoveryAbout />}
           </Box>
         </Box>
       </Box>
     </Box>
+  );
+}
+
+/**
+ * Start the demo when the overview opens. Browsers can refuse sound without a
+ * fresh gesture; then it plays muted and the controls can unmute it.
+ */
+function startPlaying(v: HTMLVideoElement | null) {
+  if (!v) return;
+  v.play().catch(() => {
+    v.muted = true;
+    v.play().catch(() => {});
+  });
+}
+
+function ControlAbout() {
+  return (
+    <>
+      <AboutSectionLabel>What this is</AboutSectionLabel>
+      <AboutParagraph>
+        Control is a browser prototype for the hardest part of Netflix — deciding what to watch. You take control of a row: describe what you're in the mood for and it retunes into a real mix of movies, shows, and games, chosen in the moment.
+      </AboutParagraph>
+
+      <AboutSectionLabel>An experiment in ingredients</AboutSectionLabel>
+      <AboutParagraph>
+        The bigger idea is widening what goes into the mix. Alongside movies and shows, this version pulls in games, and treats partnerships as a first-class ingredient: Control is presented by Samsung and unlocked through a partner sign-in — the way a device maker or carrier could light it up for their members. More ingredients, better mixes.
+      </AboutParagraph>
+
+      <AboutSectionLabel>How it works</AboutSectionLabel>
+      <AboutParagraph>
+        Open Tune Channels, or click any row title, and describe what you want — something like a tense sci-fi heist, or cozy games and shows. Claude reads your prompt and picks a matching set of titles from a real catalog, so the row fills with actual artwork. Choose which media types to include, and the hero features the first result.
+      </AboutParagraph>
+
+      <AboutSectionLabel>What's real, what's set dressing</AboutSectionLabel>
+      <AboutParagraph>
+        The catalog and its artwork are real, pulled from public movie, show, and game databases, and the tuning is a live Claude call that chooses from it. Everything around it — the chrome, the badges, the modals — is faithful set dressing so the new behavior reads as a design choice rather than a demo.
+      </AboutParagraph>
+
+      <AboutSectionLabel>Where it went</AboutSectionLabel>
+      <AboutParagraph>
+        Control was the first version of this prototype. Its prompt box became Discovery, which builds on Netflix's own AI Discover instead of a separate feature. Control's walkthrough is kept here as it was.
+      </AboutParagraph>
+    </>
+  );
+}
+
+function DiscoveryAbout() {
+  return (
+    <>
+      <Typography sx={{ fontSize: 13, fontStyle: "italic", color: tokens.color.textTertiary, marginBottom: `${tokens.space.xs}px` }}>
+        Drafted by Claude (Anthropic) with Matt Donovan.
+      </Typography>
+
+      <AboutSectionLabel>What this is</AboutSectionLabel>
+      <AboutParagraph>
+        Discovery picks up where Netflix's AI Discover leaves off. Discover offers themes like "Scare me" or "Something light" and a set of picks for each. Here, opening a theme turns it into a sentence that describes what you're after, such as "Dark crime series with scares." Every underlined word in that sentence is a control, and the picks re-rank as you change it.
+      </AboutParagraph>
+
+      <AboutSectionLabel>Where the idea comes from</AboutSectionLabel>
+      <AboutParagraph>
+        Bruce Liu's research on intra-turn interaction (Beyond Taking Turns, UCLA, 2026) asks what happens when you don't wait your turn with an AI: instead of writing a prompt, sending it and reading the reply, you steer while the answer is still forming. Discovery tries that on the couch. The picks answer each word as you change it, so you're never waiting on a turn.
+      </AboutParagraph>
+
+      <AboutSectionLabel>How it works</AboutSectionLabel>
+      <AboutParagraph>
+        Open Discover from the nav. Get more options shows the next set of themes; pick one to open it. Click a word to see its alternatives, rest on one to preview the picks (a bar fills just before they change), and click to keep it. Type at the end of the sentence to add a person, a place or a mood. The refresh button rephrases the whole idea, and Next theme moves along. Titles that fit every word come first, and if nothing fits, the word that caused it turns red.
+      </AboutParagraph>
+
+      <AboutSectionLabel>What's real, what's set dressing</AboutSectionLabel>
+      <AboutParagraph>
+        The 5,400 titles are what TMDB lists as streaming on Netflix US, with real artwork, cast and synopses. Claude tagged each one ahead of time against a spoiler-safe vocabulary: how a title feels, never how it ends. Browsing is a local re-rank, so there's no model call between you and the picks. Claude only comes in when you type something the vocabulary doesn't know.
+      </AboutParagraph>
+
+      <AboutSectionLabel>What's next</AboutSectionLabel>
+      <AboutParagraph>
+        A couch test at 10 feet with a remote, video previews on the theme cards, and an audit of the tags.
+      </AboutParagraph>
+    </>
   );
 }
 
@@ -1739,7 +1820,7 @@ function reasonBadges({
  * The Control explainer, expressed as a focus-row card. It reuses the hero's
  * mesh so the feature reads as one thing across the page.
  */
-function controlFocusItem(onOpen: () => void): FocusRowItem {
+export function controlFocusItem(onOpen: () => void): FocusRowItem {
   return {
     key: "control-card",
     title: "Control",
@@ -1750,12 +1831,12 @@ function controlFocusItem(onOpen: () => void): FocusRowItem {
           component="img"
           src={CONTROL_LOGO_DATA_URI}
           alt="Control"
-          sx={{ width: "52%", filter: "drop-shadow(0 2px 10px rgba(0,0,0,0.45))" }}
+          sx={{ width: "min(52%, 220px)", filter: "drop-shadow(0 2px 10px rgba(0,0,0,0.45))" }}
         />
       </Box>
     ),
     badges: [{ kind: "announce", text: "Presented by Samsung" }],
-    metaParts: ["Feature", "Movies, series and games"],
+    metaParts: ["Earlier prototype", "Movies, series and games"],
     synopsis: "Describe what you're in the mood for and any row retunes into a fresh mix. Open the overview to see how it works.",
     onOpen,
   };

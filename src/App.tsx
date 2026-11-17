@@ -26,6 +26,8 @@ export default function App() {
           <Route path="/discovery" element={<Channels />} />
           {/* Back-compat: the prototype was renamed Channels → Discovery. */}
           <Route path="/channels" element={<Navigate to="/discovery" replace />} />
+          {/* Back-compat: Catch Up was renamed Social. */}
+          <Route path="/catch-up" element={<Navigate to="/social" replace />} />
           <Route path="/experiments" element={<ExperimentsRouter />} />
           <Route path="/experiments/:id" element={<SingleExperimentRoute />} />
           {registeredPrototypes.map((p) => (
@@ -227,9 +229,9 @@ function TileShell({
 
 function ChannelsTile() {
   return (
-    <Tooltip title="Open Control" placement="bottom" arrow>
+    <Tooltip title="Open Discovery" placement="bottom" arrow>
       <Box sx={{ display: "inline-block" }}>
-        <TileShell label="Control" asLink="/discovery">
+        <TileShell label="Discovery" asLink="/discovery">
           <Box
             sx={{
               position: "absolute",

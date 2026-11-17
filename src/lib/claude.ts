@@ -340,3 +340,51 @@ function mockCategorize(description: string): ChannelCategory {
     ],
   };
 }
+
+// ---------------------------------------------------------------- Discovery composer
+
+export type DetailMatch = { dim: string; value: string };
+export type DetailEdit = { set: DetailMatch[]; remove: string[] };
+
+const INTERPRET_SYSTEM_PROMPT = `You edit a viewer's description for a Netflix browsing tool. You get the current description, its settings as "dim=value", the allowed settings as "dim: value, value, …", and what the viewer just typed. Decide what they meant as an edit to the description:
+- "set": settings to add or change (a dim already present gets the new value). Use ONLY dims and values from the allowed list. Two dims are open: "person" (an actor or filmmaker's full name, correctly spelled) and "keyword" (a short lowercase subject like "time travel").
+- "remove": dims to drop, when the viewer loosens something ("or anytime" drops era, "doesn't have to be scary" drops scare, "any mood" drops tone). Never remove "format" or "story".
+Typed text often refers to the existing description ("or anytime", "make it funnier", "but not so dark"); read it against the whole description. Never use anything that describes how a story ends or what happens in it. If nothing fits, return empty lists.`;
+
+const INTERPRET_TOOL = {
+  name: "edit_description",
+  description: "The edit the viewer's typed words make to the description.",
+  input_schema: {
+    type: "object" as const,
+    required: ["set", "remove"],
+    properties: {
+      set: { type: "array", items: { type: "object", required: ["dim", "value"], properties: { dim: { type: "string" }, value: { type: "string" } } } },
+      remove: { type: "array", items: { type: "string" } },
+    },
+  },
+};
+
+/** Typed words the composer couldn't match locally → an edit to the description. One call per Enter. */
+export async function interpretDetail(text: string, vocab: string, sentence: string, current: string): Promise<DetailEdit> {
+  const empty: DetailEdit = { set: [], remove: [] };
+  const clean = (r: Partial<DetailEdit> | null | undefined): DetailEdit => ({
+    set: Array.isArray(r?.set) ? r!.set : [],
+    remove: Array.isArray(r?.remove) ? r!.remove : [],
+  });
+  if (useServer) return clean(await postJson<DetailEdit>("/api/interpret", { text, vocab, sentence, current }));
+  if (!client) return empty;
+  try {
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 512,
+      system: INTERPRET_SYSTEM_PROMPT,
+      tools: [INTERPRET_TOOL],
+      tool_choice: { type: "tool", name: "edit_description" },
+      messages: [{ role: "user", content: `Description: ${sentence}\nSettings: ${current}\n\nAllowed settings:\n${vocab}\n\nViewer typed: ${text}` }],
+    });
+    const tu = response.content.find((b) => b.type === "tool_use");
+    return clean(tu && tu.type === "tool_use" ? (tu.input as DetailEdit) : null);
+  } catch {
+    return empty;
+  }
+}

@@ -24,8 +24,11 @@ export function ProfileMenu({ align = "right" }: { align?: ProfileCardAlign } = 
     function onClick(e: MouseEvent) {
       if (!wrapperRef.current?.contains(e.target as Node)) setOpen(false);
     }
+    // While the menu is open it owns the keyboard: keys must not also drive
+    // the page behind it (e.g. Escape leaving a view, arrows moving focus).
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
+      e.stopPropagation();
     }
     document.addEventListener("mousedown", onClick);
     document.addEventListener("keydown", onKey);
