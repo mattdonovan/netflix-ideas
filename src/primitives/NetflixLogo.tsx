@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
 import wordmarkUrl from "@/assets/netflix-wordmark.svg";
-import { tokens } from "@/theme/tokens";
+import nUrl from "@/assets/image.png";
 
 /**
  * Netflix wordmark — the canonical NETFLIX brand mark. SVG so it stays crisp
@@ -30,28 +30,15 @@ export function NetflixWordmark({
 }
 
 /**
- * Compact "N" mark for tight spaces (app icon analogs, etc.). Hand-rolled
- * SVG since the Figma N is a layered raster and a clean SVG renders crisply
- * at any size.
+ * The Netflix "N" (src/assets/image.png): the ribbon mark with its fold
+ * shading. Height drives size; width follows the image's aspect.
  */
 export function NetflixN({
   size = 32,
-  color = tokens.color.brand,
 }: {
-  // Accepts number (px) or any CSS length string (e.g., clamp()). Width
-  // is implied via the SVG's viewBox aspect ratio, so the consumer only
-  // needs to set the height.
+  // Number (px) or any CSS length (e.g. clamp()).
   size?: number | string;
   color?: string;
 }) {
-  return (
-    <Box
-      component="svg"
-      viewBox="0 0 28 50"
-      sx={{ height: size, aspectRatio: "28 / 50", display: "block" }}
-      aria-label="Netflix"
-    >
-      <path d="M 4 0 L 12 0 L 24 32 L 24 0 L 28 0 L 28 50 L 22 50 L 8 14 L 8 50 L 4 50 Z" fill={color} />
-    </Box>
-  );
+  return <Box component="img" src={nUrl} alt="Netflix" sx={{ height: size, width: "auto", display: "block" }} />;
 }

@@ -48,3 +48,6 @@ Thumbs.db
 
 # Claude Code local config
 .claude/
+
+# build caches
+scripts/.cache/

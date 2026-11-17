@@ -37,7 +37,17 @@ const DIRECTION_THRESHOLD = 6;
 /** Past this offset the bar stops wearing the hero's tint and takes a neutral scrim. */
 const TINT_UNTIL = 24;
 
-export type TvNavItem = { label: string; active?: boolean };
+export type TvNavItem = {
+  label: string;
+  active?: boolean;
+  /** Leading glyph, e.g. Discover's sparkle. */
+  icon?: ReactNode;
+  /** Trailing marker, e.g. a NEW badge. */
+  badge?: ReactNode;
+  onClick?: () => void;
+  /** "glass": a smoky translucent pill instead of the solid white active pill (Netflix's Discover item). */
+  tone?: "glass";
+};
 
 export function TvNav({
   items,
@@ -149,8 +159,11 @@ export function TvNav({
         {items.map((item) => (
           <Typography
             key={item.label}
+            onClick={item.onClick}
             sx={{
-              display: { xs: item.active ? "block" : "none", sm: "block" },
+              display: { xs: item.active ? "inline-flex" : "none", sm: "inline-flex" },
+              alignItems: "center",
+              gap: "8px",
               paddingInline: { xs: "12px", md: "18px" },
               paddingBlock: { xs: "5px", md: "7px" },
               borderRadius: `${tokens.radius.pill}px`,
@@ -160,8 +173,16 @@ export function TvNav({
               cursor: "pointer",
               // Active = filled pill. This is the redesign's single loudest
               // legibility change and the cheapest thing to copy.
-              backgroundColor: item.active ? tokens.color.textPrimary : "transparent",
-              color: item.active ? tokens.color.textInverse : tokens.color.textPrimary,
+              backgroundColor:
+                item.tone === "glass"
+                  ? item.active
+                    ? "rgba(255,255,255,0.24)"
+                    : "rgba(255,255,255,0.12)"
+                  : item.active
+                    ? tokens.color.textPrimary
+                    : "transparent",
+              color: item.active && item.tone !== "glass" ? tokens.color.textInverse : tokens.color.textPrimary,
+              backdropFilter: item.tone === "glass" ? "blur(8px)" : undefined,
               fontWeight: item.active
                 ? tokens.type.weight.semibold
                 : tokens.type.weight.regular,
@@ -170,7 +191,9 @@ export function TvNav({
               "&:hover": { opacity: 1 },
             }}
           >
+            {item.icon}
             {item.label}
+            {item.badge}
           </Typography>
         ))}
       </Box>

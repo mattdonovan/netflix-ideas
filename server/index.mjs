@@ -104,6 +104,44 @@ app.post("/api/tune", async (req, res) => {
   }
 });
 
+const INTERPRET_SYSTEM_PROMPT = `You edit a viewer's description for a Netflix browsing tool. You get the current description, its settings as "dim=value", the allowed settings as "dim: value, value, …", and what the viewer just typed. Decide what they meant as an edit to the description:
+- "set": settings to add or change (a dim already present gets the new value). Use ONLY dims and values from the allowed list. Two dims are open: "person" (an actor or filmmaker's full name, correctly spelled) and "keyword" (a short lowercase subject like "time travel").
+- "remove": dims to drop, when the viewer loosens something ("or anytime" drops era, "doesn't have to be scary" drops scare, "any mood" drops tone). Never remove "format" or "story".
+Typed text often refers to the existing description ("or anytime", "make it funnier", "but not so dark"); read it against the whole description. Never use anything that describes how a story ends or what happens in it. If nothing fits, return empty lists.`;
+
+const INTERPRET_TOOL = {
+  name: "edit_description",
+  description: "The edit the viewer's typed words make to the description.",
+  input_schema: {
+    type: "object",
+    required: ["set", "remove"],
+    properties: {
+      set: { type: "array", items: { type: "object", required: ["dim", "value"], properties: { dim: { type: "string" }, value: { type: "string" } } } },
+      remove: { type: "array", items: { type: "string" } },
+    },
+  },
+};
+
+// Discovery composer: typed words that didn't match locally → an edit to the description.
+app.post("/api/interpret", async (req, res) => {
+  if (!ready(res)) return;
+  const { text = "", vocab = "", sentence = "", current = "" } = req.body ?? {};
+  try {
+    const r = await client.messages.create({
+      model: MODEL,
+      max_tokens: 512,
+      system: INTERPRET_SYSTEM_PROMPT,
+      tools: [INTERPRET_TOOL],
+      tool_choice: { type: "tool", name: "edit_description" },
+      messages: [{ role: "user", content: `Description: ${String(sentence).slice(0, 400)}\nSettings: ${String(current).slice(0, 400)}\n\nAllowed settings:\n${vocab}\n\nViewer typed: ${String(text).slice(0, 300)}` }],
+    });
+    const tu = r.content.find((b) => b.type === "tool_use");
+    res.json(tu ? tu.input : { set: [], remove: [] });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
 app.post("/api/summarize", async (req, res) => {
   if (!ready(res)) return;
   const { prompt = "" } = req.body ?? {};

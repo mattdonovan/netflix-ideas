@@ -35,6 +35,6 @@ export type RegisteredPrototype = {
 };
 
 export const registeredPrototypes: RegisteredPrototype[] = [
-  { slug: "catch-up", label: "Catch Up", glyph: "👥", Component: CatchUp },
+  { slug: "social", label: "Social", glyph: "👥", Component: CatchUp },
   // SCRIPT ANCHOR: entries (do not remove — `npm run build-idea` inserts above this line)
 ];
